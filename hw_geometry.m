@@ -1,8 +1,12 @@
 %% ######## G1 2D reconstruction ########
-clear, close all;
+clear, close all, clear HX;
 img = imread('Image+-+Castello+di+Miramare.jpg');
 img_g = rgb2gray(img);
 imshow(img), hold on;
+
+%%
+%HX.rescaling(1/max(size(img)));
+rescale_h = @(h) diag([1/HX.rescaling 1/HX.rescaling 1]) * h * diag([1*HX.rescaling 1*HX.rescaling 1]);
 
 %% PI segments' points
 % defines the given line segments of plane PI exploiting class Seg and HX
@@ -59,7 +63,7 @@ v_inf = [v37.X.'; v58.X.'; v29.X.'];
 % looks for the solution for l_inf that minimizing ||v_inf * l_inf||
 [~, ~, V] = svd(v_inf);
 
-l_inf = HX(V(1:end-1,end).');
+l_inf = HX(V(1:end-1,end).', "is_rescaled");
 
 l_inf.draw_line();
 
@@ -67,7 +71,10 @@ l_inf.draw_line();
 H_p = [1 0 0; 0 1 0; l_inf.X.'];
 
 %% Show the rectificated image
-img_a = imwarp(img_g, projective2d(H_p.'));
+% in order to apply the homografphy on the whole image
+% we have to use the rescaled form of the homography
+Hi_p = rescale_h(H_p);
+img_a = imwarp(img_g, projective2d(Hi_p.'));
 figure, imshow(img_a, "InitialMagnification", "fit"), hold on;
 
 %% Affine rectify the ortogonal segments
@@ -115,14 +122,23 @@ H_a = U*sqrt(D)*V' + diag([0 0 1]);
 % invert H_a
 H_a = eye(3) / H_a;
 
+% removes the possible mirroring effect given by affine transformation
+if H_a(1,1) < 0
+	H_a = H_a * diag([-1 1 1]);
+end
+if H_a(2,2) < 0
+	H_a = H_a * diag([1 -1 1]);
+end
+
 % computes the complessive homography
 H = H_a * H_p;
 
 %% Show the rectificated image
-t_a = affine2d(H_a.');
+Hi_a = rescale_h(H_a);
+sameAsInput = affineOutputView(size(img_a),affine2d(Hi_a.'),'BoundsStyle','SameAsInput');
 
-sameAsInput = affineOutputView(size(img_a),t_a,'BoundsStyle','SameAsInput');
-img_ap = imwarp(img_a, t_a,'OutputView',sameAsInput);
+Hi = rescale_h(H_a * H_p);
+img_ap = imwarp(img_g, projective2d(Hi.'),'OutputView',sameAsInput);
 
 figure, imshow(img_ap, "InitialMagnification", "fit"), hold on;
 
@@ -145,7 +161,7 @@ s6_m.draw;
 
 o = s1_m.line * s2_m.line;
 
-H_t = [eye(2), -o.cart;zeros(2,1)' 1];
+H_t = [eye(2), -o.X(1:2);zeros(2,1)' 1];
 
 H = H_t * H_a * H_p;
 
@@ -166,7 +182,7 @@ s5_t.draw;
 s6_t.draw;
 
 %% Rotate the frame
-% put the segment s2 on the y-axis
+% puts the segment s2 on the y-axis
 rotz = @(t) [cos(t) -sin(t) 0 ; sin(t) cos(t) 0 ; 0 0 1];
 
 p = s2_t.P(1).cart();
@@ -230,3 +246,107 @@ s3_f.draw;
 s4_f.draw;
 s5_f.draw;
 s6_f.draw;
+
+%% Define the homography from image unit to scaled unit
+Hi = rescale_h(H);
+
+%% ######## G2 Calibration ########
+figure, imshow(img), hold on;
+
+%% Add veritical lines
+sv1 = Seg(HX([1197 2226]), HX([1342 1191]));
+sv2 = Seg(HX([3150 2953]), HX([2838 1346]));
+sv3 = Seg(HX([1255 1181]), HX([975 2945]));
+sv4 = Seg(HX([1531 2439]), HX([1574 1808]));
+sv5 = Seg(HX([374 2003]), HX([512 1531]));
+sv6 = Seg(HX([2769 2044]), HX([2839 2491]));
+
+sv1.draw;
+sv2.draw;
+sv3.draw;
+sv4.draw;
+sv5.draw;
+sv6.draw;
+
+%% Compute the vertical vanish point
+% exploits several vertical line with LSM to reduce the error
+A = [
+	sv1.line.X.';
+	sv2.line.X.';
+	sv3.line.X.';
+	sv4.line.X.';
+	sv5.line.X.';
+	sv6.line.X.';
+	];
+
+[~, ~, V] = svd(A);
+
+vv = V(:, end);
+vv = vv / vv(3);
+
+vv = HX(vv(1:2).', "is_rescaled");
+
+vv.draw_point;
+
+%%
+lv3.draw;
+lv7.draw;
+lv5.draw;
+lv8.draw;
+lv2.draw;
+lv9.draw;
+
+%%
+% consider the matrix W = K'K and its elements w = [w1,0,w3,w4,w5,w6]'
+% w2 = 0 due to skew factor approsimation s = 0
+% a'Wb = 0 constraints can be collected in Aw = 0
+% where each of them can be write as a row of A
+% a_i = [v1u1, v1u2+v2u1, v2u2, v1u3+v3u1, v2u3+v3u2, v3u3]
+
+a = @(v,u) [v(1)*u(1) v(1)*u(2)+v(2)*u(1) v(2)*u(2) v(1)*u(3)+v(3)*u(1) v(2)*u(3)+v(3)*u(2) v(3)*u(3)];
+
+C = [
+	[0 1 0 0 0 0];
+	zeros([5,6]);
+	];
+
+[~, ~, V] = svd(C);
+C_p = V(:, 1+rank(C):end);
+
+
+A = [
+	a(H(:,1), H(:,2));
+	a(H(:,1), H(:,1)) - a(H(:,2), H(:,2));
+	a(vv.X, v37.X);
+	a(vv.X, v58.X);
+	a(vv.X, v29.X);
+	];
+
+%%%
+[~, ~, V] = svd(A*C_p);
+
+w = C_p*V(:,end)
+
+W = [
+	[w(1) , w(2), w(4)];
+	[w(2), w(3), w(5)];
+	[w(4), w(5), w(6)];
+	];
+%W = inv(W)
+
+K = chol(W)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+%%

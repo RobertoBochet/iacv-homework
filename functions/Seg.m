@@ -1,7 +1,6 @@
 classdef Seg
 	%SEG Summary of this class goes here
 	%   Detailed explanation goes here
-	
 	properties
 		P(2,1)
 	end
@@ -37,8 +36,8 @@ classdef Seg
 				options.Color string = "r"
 			end
 			
-			p1 = obj.P(1).cart();
-			p2 = obj.P(2).cart();
+			p1 = obj.P(1).cart;
+			p2 = obj.P(2).cart;
 			
 			plot([p1(1) p2(1)], [p1(2) p2(2)], options);
 		end
