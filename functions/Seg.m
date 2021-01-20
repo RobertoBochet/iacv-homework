@@ -42,6 +42,22 @@ classdef Seg
 			plot([p1(1) p2(1)], [p1(2) p2(2)], options);
 		end
 		
+		function draw_to(obj, l, options)
+			arguments
+				obj
+				l(1,1) HX
+				options.Color string = "r"
+			end
+			
+			pu = obj.line * l;
+			pu = pu.cart;
+			
+			p1 = obj.P(1).cart;
+			p2 = obj.P(2).cart;
+			
+			plot([p1(1) pu(1)], [p1(2) pu(2)], options);
+		end
+		
 		function r = mtimes(obj1, obj2)
 			if Seg.is(obj2)				
 				r = Seg(obj1 * obj2.P(1), obj1 * obj2.P(2));

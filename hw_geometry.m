@@ -1,12 +1,14 @@
 %% ######## G1 2D reconstruction ########
 clear, close all, clear HX;
-img = imread('Image+-+Castello+di+Miramare.jpg');
+img = imread('input.jpg');
 img_g = rgb2gray(img);
 imshow(img), hold on;
 
 %%
-%HX.rescaling(1/max(size(img)));
-rescale_h = @(h) diag([1/HX.rescaling 1/HX.rescaling 1]) * h * diag([1*HX.rescaling 1*HX.rescaling 1]);
+k = 1/max(size(img));
+HX.scale_factor(k);
+rescale_m = @(v) diag([v v 1]);
+rescale_h = @(h) rescale_m(1/HX.scale_factor) * h * rescale_m(HX.scale_factor);
 
 %% PI segments' points
 % defines the given line segments of plane PI exploiting class Seg and HX
@@ -27,38 +29,58 @@ s6.draw;
 
 %% Add parallel lines to PI
 % defines additional line segments paraller to the plane PI
-s7 = Seg(HX([1831 2305]), HX([2127 2390]));
-s8 = Seg(HX([3085 2665]), HX([2911 2750]));
-s9 = Seg(HX([1260 2347]), HX([1508 2526]));
+% for the castle's facades 2,3 and 5 
+sg2 = SegGroup([
+	1391.8 1831.1  1532.7 1994.1;
+	1396.5 1597.2  1538.6 1788.7;
+	1259.6 2344.5  1498.5 2516.0;
+	1356.4 1472.3  1567.5 1762.8;
+	1239.6 2483.2  1511.8 2654.3;
+	]);
+sg3 = SegGroup([
+	1793.7 1633.7  2107.2 1775.8;
+	1828.7 2705.6  2082.1 2752.6;
+	1829.8 2330.3  2109.2 2406.7;
+	1830.8 2305.0  2126.7 2388.5;
+	1811.9 1426.4  2067.1 1554.6;
+	]);
+sg5 = SegGroup([
+	2822.2 1539.9  2690.8 1721.2;
+	2909.9 2748.7  3033.9 2688.8;
+	2902.8 2670.4  3032.5 2598.6;
+	2879.0 1830.3  2782.7 1936.1;
+	]);
 
-%% Calculate vanish points
-v37 = s3.line * s7.line;
-v58 = s5.line * s8.line;
-v29 = s2.line * s9.line;
+% adds the given segments of the plane PI
+sg2 = sg2 + s2;
+sg3 = sg3 + s3;
+sg5 = sg5 + s5;
 
-v37.draw_point;
-v58.draw_point;
-v29.draw_point;
+sg2.draw;
+sg3.draw;
+sg5.draw;
+%%
+limit = Seg(HX(1.3*[0,size(img,1)]),HX(1.3*size(img,2,1))).line;
 
-%% Draw vanish lines
-lv3 = Seg(v37, s3.P(1));
-lv7 = Seg(v37, s7.P(1));
-lv5 = Seg(v58, s5.P(2));
-lv8 = Seg(v58, s8.P(1));
-lv2 = Seg(v29, s2.P(1));
-lv9 = Seg(v29, s9.P(1));
+sg2.draw_to(limit);
+sg3.draw_to(limit);
+sg5.draw_to(limit);
 
-lv3.draw;
-lv7.draw;
-lv5.draw;
-lv8.draw;
-lv2.draw;
-lv9.draw;
+%% Compute the vanish points
+% searches the best approximation for the vanish points 
+% of the facades' planes with LSM
+v2 = sg2.find_vanish_point;
+v3 = sg3.find_vanish_point;
+v5 = sg5.find_vanish_point;
+
+v2.draw_point;
+v3.draw_point;
+v5.draw_point;
 
 %% Compute the line at the infinity
 % prepares the matrix v_inf for LST
 % to find the best approximation of infinity line l_inf
-v_inf = [v37.X.'; v58.X.'; v29.X.'];
+v_inf = [v3.X.'; v5.X.'; v2.X.'];
 
 % looks for the solution for l_inf that minimizing ||v_inf * l_inf||
 [~, ~, V] = svd(v_inf);
@@ -249,55 +271,56 @@ s6_f.draw;
 
 %% Define the homography from image unit to scaled unit
 Hi = rescale_h(H);
+Hi_rtap = rescale_h(H_r * H_t * H_a * H_p);
+Hi_ap = rescale_h(H_a * H_p);
+
+%% Rescale usefull data to the image scale
+%v3 = v3.rescale;
+%v5 = v5.rescale;
+%v2 = v2.rescale;
+
+%% Use the image scale as default
+%HX.scale_factor(1);
 
 %% ######## G2 Calibration ########
 figure, imshow(img), hold on;
 
 %% Add veritical lines
-sv1 = Seg(HX([1197 2226]), HX([1342 1191]));
-sv2 = Seg(HX([3150 2953]), HX([2838 1346]));
-sv3 = Seg(HX([1255 1181]), HX([975 2945]));
-sv4 = Seg(HX([1531 2439]), HX([1574 1808]));
-sv5 = Seg(HX([374 2003]), HX([512 1531]));
-sv6 = Seg(HX([2769 2044]), HX([2839 2491]));
+sgv = SegGroup([
+		[1197 2226  1342 1191];
+		[3150 2953  2838 1346];
+		[1255 1181  975 2945];
+		[1531 2439  1574 1808];
+		[374 2003  512 1531];
+		[2769 2044  2839 2491];
+	]);
 
-sv1.draw;
-sv2.draw;
-sv3.draw;
-sv4.draw;
-sv5.draw;
-sv6.draw;
+sgv.draw;
+
+%% Draw the extension of the vertical lines
+limit = Seg(HX(-1.7*[0,size(img,1)]),HX(-1.7*size(img,2,1))).line;
+
+sgv.draw_to(limit);
 
 %% Compute the vertical vanish point
-% exploits several vertical line with LSM to reduce the error
-A = [
-	sv1.line.X.';
-	sv2.line.X.';
-	sv3.line.X.';
-	sv4.line.X.';
-	sv5.line.X.';
-	sv6.line.X.';
-	];
-
-[~, ~, V] = svd(A);
-
-vv = V(:, end);
-vv = vv / vv(3);
-
-vv = HX(vv(1:2).', "is_rescaled");
+% exploits several vertical lines with LSM to reduce the error
+vv = sgv.find_vanish_point;
 
 vv.draw_point;
 
-%%
-lv3.draw;
-lv7.draw;
-lv5.draw;
-lv8.draw;
-lv2.draw;
-lv9.draw;
+%% Draw vanish points for plane 2,3 and 5
+
+v2.draw_point;
+v3.draw_point;
+v5.draw_point;
 
 %%
-% consider the matrix W = K'K and its elements w = [w1,0,w3,w4,w5,w6]'
+% img_ap = imwarp(img_g, projective2d(Hi_rtap.'));
+% 
+% figure, imshow(img_ap, "InitialMagnification", "fit"), hold on;
+
+%%
+% consider the matrix W = (KK')^-1 and its elements w = [w1,w2,w3,w4,w5,w6]'
 % w2 = 0 due to skew factor approsimation s = 0
 % a'Wb = 0 constraints can be collected in Aw = 0
 % where each of them can be write as a row of A
@@ -313,32 +336,51 @@ C = [
 [~, ~, V] = svd(C);
 C_p = V(:, 1+rank(C):end);
 
-
+h = inv(H_a * H_p);
+%h = inv(Hi_ap);
 A = [
-	a(H(:,1), H(:,2));
-	a(H(:,1), H(:,1)) - a(H(:,2), H(:,2));
-	a(vv.X, v37.X);
-	a(vv.X, v58.X);
-	a(vv.X, v29.X);
+	a(h(:,1), h(:,2));
+	a(h(:,1), h(:,1)) - a(h(:,2), h(:,2));
+	a(vv.X, v3.X);
+	a(vv.X, v5.X);
+	a(vv.X, v2.X);
 	];
 
 %%%
 [~, ~, V] = svd(A*C_p);
 
-w = C_p*V(:,end)
+w = C_p*V(:,end);
 
 W = [
 	[w(1) , w(2), w(4)];
 	[w(2), w(3), w(5)];
 	[w(4), w(5), w(6)];
 	];
-%W = inv(W)
 
-K = chol(W)
+if all(eigs(W) < 0)
+	W = -W;
+end
+e = eigs(W)
+
+K = chol(W);
+K = inv(K);
+K = K / K(3,3)
+
+%K =  rescale_m(1/k) * K;
 
 
+M = [K, zeros(3,1)]
 
-
+%%
+imshow(img, "InitialMagnification", "fit")
+%%
+% HX.scale_factor(1);
+% P1 = HX([2000 2000 10000]);
+% 
+% p1 = M * P1
+% 
+% p1.draw_point;
+% 
 
 
 

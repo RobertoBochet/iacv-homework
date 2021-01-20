@@ -1,7 +1,7 @@
 classdef HX	
 	properties
 		X (:,1)
-		IsRescaled logical
+		ScaleFactor(1,1) double = 1
 	end
 	
 	methods(Static)
@@ -9,34 +9,35 @@ classdef HX
 			r = isa(obj,'HX');
 		end
 		
-		function out = rescaling(val)
-			persistent Rescaling;
+		function out = scale_factor(val)
+			persistent scale_factor;
 			
-			if isempty(Rescaling)
-				Rescaling = 1;
+			if isempty(scale_factor)
+				scale_factor = 1;
 			end
 			
 			if nargin
-				Rescaling = val;
+				scale_factor = val;
 			end
 			
-			out = Rescaling;
+			out = scale_factor;
 		end
 	end
 	
 	methods
-		function obj = HX(x, rescaling_option)
+		function obj = HX(x, rescaling_option, scale_factor)
 			arguments
 				x (1,:)
 				rescaling_option (1,1) string {mustBeMember(rescaling_option,{'rescale','no_rescale','is_rescaled'})} = "rescale"
+				scale_factor (1,1) double = HX.scale_factor
 			end
 			
 			if rescaling_option == "rescale"
-				x = x * HX.rescaling;
-				obj.IsRescaled = 1;
+				obj.ScaleFactor = scale_factor;
+				x = x * obj.ScaleFactor;
 			
 			elseif rescaling_option == "is_rescaled"
-				obj.IsRescaled = 1;
+				obj.ScaleFactor = scale_factor;
 			end
 			
 			obj.X = [x 1].';
@@ -53,14 +54,8 @@ classdef HX
 				r = obj1 * obj2.X;
 			end
 			
-			if obj2.IsRescaled
-				m = "is_rescaled";
-			else
-				m = "no_rescale";
-			end
-			
 			r = r/r(end);
-			r = HX(r(1:end-1).', m);
+			r = HX(r(1:end-1).', "is_rescaled", obj2.ScaleFactor);
 		end
 		
 		function obj = r(obj, f)
@@ -74,11 +69,13 @@ classdef HX
 			
 			x = obj.X(1:end-1);
 			
-			if obj.IsRescaled
-				x = x / HX.rescaling;
-			end
+			x = x / obj.ScaleFactor;
 		end
 		
+		function obj = rescale(obj)
+			obj.X = [obj.cart.' 1].';
+			obj.ScaleFactor = 1;
+		end
 		
 		function draw_point(obj, options)
 			arguments
@@ -115,9 +112,6 @@ classdef HX
 			
 			p1 = obj*l1;
 			p2 = obj*l2;
-			
-			p1.IsRescaled = obj.IsRescaled;
-			p2.IsRescaled = obj.IsRescaled;
 			
 			Seg(p1, p2).draw("Color", "m");
 		end
