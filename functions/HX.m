@@ -22,6 +22,20 @@ classdef HX
 			
 			out = scale_factor;
 		end
+		
+		function out = drawing_limits(val)
+			persistent drawing_limits;
+			
+			if isempty(drawing_limits)
+				drawing_limits = [[0, 3968];[0 2976]];
+			end
+			
+			if nargin
+				drawing_limits = val;
+			end
+			
+			out = drawing_limits;
+		end
 	end
 	
 	methods
@@ -89,31 +103,36 @@ classdef HX
 			plot(coord(1), coord(2), options);
 		end
 		
-		function draw_line(obj, limits)
+		function draw_line(obj)
 			arguments
 				obj
-				limits(:,:) double = [-3000; 6000]
+				%limits(2,2) double = [-3000; 6000]
 			end
 			
-			obj = obj.normalize();
+			l = obj.normalize().X;
 			
-			limits_size = size(limits);
+			limits = HX.drawing_limits;
 			
-			if limits_size(2) == 2
-				l1 = HX([-1/limits(1) 0], 0);
-				l2 = HX([-1/limits(2) 0], 0);
-				
-			elseif limits_size(1) == 2
-				limits = limits.';
-				
-				l1 = HX([0 -1/limits(1)], "no_rescale");
-				l2 = HX([0 -1/limits(2)], "no_rescale");
+			xmin = limits(1,1);
+			ymin = limits(2,1);
+			xmax = limits(1,2);
+			ymax = limits(2,2);
+			
+			p_limits = [
+					[xmin, -(1 + l(1)*xmin)/l(2)];
+					[-(1 + l(2)*ymin)/l(1), ymin];
+					[xmax, -(1 + l(1)*xmax)/l(2)];
+					[-(1 + l(2)*ymax)/l(1), ymax];
+				];
+			
+			p = [];
+			for i = (1:size(p_limits,1))
+				if xmin <= p_limits(i,1) && p_limits(i,1) <= xmax && ymin <= p_limits(i,2) && p_limits(i,2) <= ymax
+					p(end+1,:) = p_limits(i,:);
+				end
 			end
 			
-			p1 = obj*l1;
-			p2 = obj*l2;
-			
-			Seg(p1, p2).draw("Color", "m");
+ 			Seg(HX(p(1,:)), HX(p(2,:))).draw("Color", "m");
 		end
 	end
 end

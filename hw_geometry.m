@@ -4,11 +4,11 @@ img = imread('input.jpg');
 img_g = rgb2gray(img);
 imshow(img), hold on;
 
-%%
-k = 1/max(size(img));
-HX.scale_factor(k);
-rescale_m = @(v) diag([v v 1]);
-rescale_h = @(h) rescale_m(1/HX.scale_factor) * h * rescale_m(HX.scale_factor);
+HX.drawing_limits([
+				[-1*size(img,1) 2*size(img,1)];
+				[-1*size(img,2) 2*size(img,2)]]);
+
+set(0, 'DefaultLineLineWidth', 2);
 
 %% PI segments' points
 % defines the given line segments of plane PI exploiting class Seg and HX
@@ -82,10 +82,17 @@ v5.draw_point;
 % to find the best approximation of infinity line l_inf
 v_inf = [v3.X.'; v5.X.'; v2.X.'];
 
-% looks for the solution for l_inf that minimizing ||v_inf * l_inf||
-[~, ~, V] = svd(v_inf);
+% computes the normalized data and the corresponding similar transformation
+[T, v_inf_n] = get_normalized_transformation(v_inf);
 
-l_inf = HX(V(1:end-1,end).', "is_rescaled");
+% looks for the solution for l_inf that minimizing ||v_inf * l_inf||
+[~, ~, V] = svd(v_inf_n);
+
+v = V(:, end);
+v = v / v(end);
+
+% reverts the data normalization
+l_inf = T' * HX(v(1:end-1)');
 
 l_inf.draw_line();
 
@@ -93,10 +100,7 @@ l_inf.draw_line();
 H_p = [1 0 0; 0 1 0; l_inf.X.'];
 
 %% Show the rectificated image
-% in order to apply the homografphy on the whole image
-% we have to use the rescaled form of the homography
-Hi_p = rescale_h(H_p);
-img_a = imwarp(img_g, projective2d(Hi_p.'));
+img_a = imwarp(img, projective2d(H_p.'));
 figure, imshow(img_a, "InitialMagnification", "fit"), hold on;
 
 %% Affine rectify the ortogonal segments
@@ -125,9 +129,14 @@ l4 = s4_a.line.X;
 l5 = s5_a.line.X;
 l6 = s6_a.line.X;
 
-C_d = [[l1(1) * l2(1), l1(1) * l2(2) + l1(2) * l2(1), l1(2) * l2(2)];
-	   [l4(1) * l5(1), l4(1) * l5(2) + l4(2) * l5(1), l4(2) * l5(2)];
-	   [l5(1) * l6(1), l5(1) * l6(2) + l5(2) * l6(1), l5(2) * l6(2)]];
+% defines the shape of a single row of the 
+a = @(l,m) [l(1)*m(1), l(1)*m(2)+l(2)*m(1), l(2)*m(2)];
+
+C_d = [
+	a(l1,l2);
+	a(l4,l5);
+	a(l5,l6);
+	];
 
 %% Searching the infinite line conic in affine rectificated image
 % looks for the solution for s that minimizing ||C_d * s|| to find C_inf
@@ -136,11 +145,14 @@ C_d = [[l1(1) * l2(1), l1(1) * l2(2) + l1(2) * l2(1), l1(2) * l2(2)];
 s = V(:,end);
 
 C_inf = [[s(1) s(2) 0]; [s(2) s(3) 0]; [0 0 0]];
+S = [[s(1) s(2)]; [s(2) s(3)]];
 
 %% Looking for affine trasformation to map c_inf to its canonical position
-[U,D,V] = svd(C_inf);
+[U,D,V] = svd(S);
 
-H_a = U*sqrt(D)*V' + diag([0 0 1]);
+H_a = diag([0 0 1]);
+H_a(1:2,1:2) = U*sqrt(D)*V';
+
 % invert H_a
 H_a = eye(3) / H_a;
 
@@ -156,11 +168,11 @@ end
 H = H_a * H_p;
 
 %% Show the rectificated image
-Hi_a = rescale_h(H_a);
-sameAsInput = affineOutputView(size(img_a),affine2d(Hi_a.'),'BoundsStyle','SameAsInput');
+%Hi_a = rescale_h(H_a);
+sameAsInput = affineOutputView(size(img_a),affine2d(H_a.'),'BoundsStyle','SameAsInput');
 
-Hi = rescale_h(H_a * H_p);
-img_ap = imwarp(img_g, projective2d(Hi.'),'OutputView',sameAsInput);
+%Hi = rescale_h(H_a * H_p);
+img_ap = imwarp(img, projective2d(H.'),'OutputView',sameAsInput);
 
 figure, imshow(img_ap, "InitialMagnification", "fit"), hold on;
 
@@ -253,52 +265,31 @@ s4_s = H * s4;
 s5_s = H * s5;
 s6_s = H * s6;
 
-% computes the line segments for a close line 
-s1_f = Seg(s1_s.P(1), s1_s & s2_s);
-s2_f = Seg(s1_s & s2_s, s2_s & s3_s);
-s3_f = Seg(s2_s & s3_s, s3_s & s4_s);
-s4_f = Seg(s3_s & s4_s, s4_s & s5_s);
-s5_f = Seg(s4_s & s5_s, s5_s & s6_s);
-s6_f = Seg(s5_s & s6_s, s6_s.P(2));
-
 figure, hold on, daspect([1 1 1]);
-s1_f.draw;
-s2_f.draw;
-s3_f.draw;
-s4_f.draw;
-s5_f.draw;
-s6_f.draw;
-
-%% Define the homography from image unit to scaled unit
-Hi = rescale_h(H);
-Hi_rtap = rescale_h(H_r * H_t * H_a * H_p);
-Hi_ap = rescale_h(H_a * H_p);
-
-%% Rescale usefull data to the image scale
-%v3 = v3.rescale;
-%v5 = v5.rescale;
-%v2 = v2.rescale;
-
-%% Use the image scale as default
-%HX.scale_factor(1);
+s1_s.draw;
+s2_s.draw;
+s3_s.draw;
+s4_s.draw;
+s5_s.draw;
+s6_s.draw;
 
 %% ######## G2 Calibration ########
 figure, imshow(img), hold on;
 
 %% Add veritical lines
 sgv = SegGroup([
-		[1197 2226  1342 1191];
-		[3150 2953  2838 1346];
-		[1255 1181  975 2945];
-		[1531 2439  1574 1808];
-		[374 2003  512 1531];
-		[2769 2044  2839 2491];
+		1197 2226  1342 1191;
+		3150 2953  2838 1346;
+		1255 1181  975 2945;
+		1531 2439  1574 1808;
+		374 2003  512 1531;
+		2769 2044  2839 2491;
 	]);
 
 sgv.draw;
 
 %% Draw the extension of the vertical lines
-limit = Seg(HX(-1.7*[0,size(img,1)]),HX(-1.7*size(img,2,1))).line;
+limit = Seg(HX(-1.5*[0,size(img,1)]),HX(-1.7*size(img,2,1))).line;
 
 sgv.draw_to(limit);
 
@@ -315,18 +306,13 @@ v3.draw_point;
 v5.draw_point;
 
 %%
-% img_ap = imwarp(img_g, projective2d(Hi_rtap.'));
-% 
-% figure, imshow(img_ap, "InitialMagnification", "fit"), hold on;
-
-%%
 % consider the matrix W = (KK')^-1 and its elements w = [w1,w2,w3,w4,w5,w6]'
 % w2 = 0 due to skew factor approsimation s = 0
 % a'Wb = 0 constraints can be collected in Aw = 0
 % where each of them can be write as a row of A
 % a_i = [v1u1, v1u2+v2u1, v2u2, v1u3+v3u1, v2u3+v3u2, v3u3]
 
-a = @(v,u) [v(1)*u(1) v(1)*u(2)+v(2)*u(1) v(2)*u(2) v(1)*u(3)+v(3)*u(1) v(2)*u(3)+v(3)*u(2) v(3)*u(3)];
+a = @(v,u) [v(1)*u(1), v(1)*u(2)+v(2)*u(1), v(2)*u(2), v(1)*u(3)+v(3)*u(1), v(2)*u(3)+v(3)*u(2), v(3)*u(3)];
 
 C = [
 	[0 1 0 0 0 0];
@@ -360,7 +346,8 @@ W = [
 if all(eigs(W) < 0)
 	W = -W;
 end
-e = eigs(W)
+
+eigs(W)
 
 K = chol(W);
 K = inv(K);
