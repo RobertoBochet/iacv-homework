@@ -156,3 +156,30 @@ K = \begin{bmatrix}
 \end{bmatrix}
 $$
 
+### G3 - Localization
+
+To compute the extrinsic parameters of the camera I used the knowledge of the metric rectification.
+Indeed the homography computed in the point **G1** gives us the information to move 2D point of plane $\Pi$ to 3D points; if we want retrieve the rototranslation transformation between camera frame and the frame chosen for the homography $H^{-1}$ we can use the relation
+
+$$
+\begin{bmatrix} r_x & r_y & t \end{bmatrix} = K^{-1}H
+$$
+
+where $r_x$ and $r_y$ are the rescaled unit vectors of the world frame chosen as reference in the homography and $t$ is its origin position in the frame camera.
+The $r_z$ can be calculated as the unit vector which complete the rotation matrix given by $r_x$ and $r_y$
+
+$$
+r_z = \left( \frac{r_x}{\lVert r \rVert} \times \frac{r_y}{\lVert r \rVert} \right) \lVert r \rVert
+$$
+
+The projective matrix $M$ can be written as
+
+$$
+M = K \begin{bmatrix} r_x & r_y & r_z & t \end{bmatrix}
+$$
+
+*I chose to use the homography in metric unit.*
+
+So I could easily draw the world reference frame in the image.
+
+![reference frame](./output/reference_frame.png){height=250px}
