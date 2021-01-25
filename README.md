@@ -10,6 +10,30 @@ header-includes: |
 
 ## Geometry
 
+### Functions and class
+
+To simplify the developing of the required result I chose to write some classes and functions.
+
+#### Class
+
+- `HX`
+  
+    Represents a homogeneous vector. The multiplication between two `HW` instances is interpreted as a cross product, moreover provides some function to draw as line or point.
+
+- `Seg`
+  
+    Represents a line segment. It provides method `line` to retrieve the associated line.
+  
+- `SegGroup`
+
+    Represents a group of line segments. The method `find_vanish_point` finds the intersection point of the lines as an optimization problem.
+
+#### Functions
+
+- `get_normalized_transformation`
+    
+    Given a set of homogeneous points returns a similar transformation to normalize them. 
+
 ### G1 - 2D reconstruction
 
 #### Recovery of the affine properties
@@ -80,3 +104,55 @@ I chose to put the reference frame at the intersection of the lines 1 and 2, wit
 first I applied a translation to define the new origin, then I calculated the rotation matrix to align the line $2$ to the y-axis, and as last step I rescaled the points to meter unit exploiting an approximate measure of the segment $5$ gotten from internet. 
 
 ![$\Pi$ on reference frame](./output/pi_reference_frame.svg){height=250px}
+
+### G2 - Calibration
+
+#### Vertical vanish point
+
+I selected the vertical lines shown in the figure to find the vertical vanish point. As previously I put the vertical segments in an instance of `SegGroup` and I used the method `find_vanish_point` to find the intersection point of the segments' associated lines. As previously saw, the function `find_vanish_point` solve the problem to find intersection point as an optimization one, exploiting `svd` after the data normalization.
+
+![vertical vanish point](./output/vertical_vanish.png){height=500px}
+
+#### Calibration
+
+Now, we have 4 vanish point and a metric rectification homography that we can use to compute the intrinsic parameters of the camera.
+In particular, I used the technique of the conical fitting. This technique is based on set an optimization problem to find the conic $\omega = (KK^T)^{-1}$. Due to the assumption of skew equal to zero the conic can be written as
+
+$$
+\omega = \begin{bmatrix}
+    w_1 & 0 & w_3 \\
+    0 & w_2 & w_4 \\
+    w_3 & w_4 & w_5
+\end{bmatrix}
+$$
+
+it is invariant to scale then it has 4 dof. 
+
+I set the first constraint exploiting the homography computed at the point **G1**: given a metric rectified homography ($H^{-1}$) we can find the projection of the two canonical circular points $\begin{bmatrix} 1 & \pm i & 0 \end{bmatrix}^T$ in the image, which intersect $\omega$ conic. With the inverse homography we can map the circular points in the image as $H \begin{bmatrix} 1 & \pm i & 0 \end{bmatrix}^T$ getting $h_1 \pm i h_2$ where $h_1$ and $h_2$ are the columns of $H$.
+The conic have to satisfy the constraints $(h_1 \pm i h_2)^T \omega (h_1 \pm i h_2) = 0$ which can be rewritten as $h_1^T \omega h_2 = 0$ and $h_1^T \omega h_1 - h_2^T \omega h_2 = 0$ that guarantee 2 constraints.
+
+The others two required constraints are given by ones based on orthogonality: given two vanish points $v, u$ corresponding to orthogonal lines these satisfy the equation $v^T \omega u = 0$. I tried this way used the couple of vanish points given by the plane 2, 3, 5 and vertical ones, but due to numerical error these introduce too uncertainty, so I decide to use the alternative constraint based on a vanish line $l$ and a vanish point $v$ corresponding to orthogonal plane and line $[l]_x \omega v = 0$, where $[l]_x$ is the $\mathbb{P}^2$ version of the Plücker matrix of $l$ such that
+
+$$
+[l]_x = \begin{bmatrix}
+    0 & -l_3 & l_2 \\
+    l_3 & 0 & -l_1 \\
+    -l_2 & l_1 & 0
+\end{bmatrix}
+$$
+
+This equation gives two other constraints.
+For these, I chose the vertical vanish point and the infinity line found at the point **G1**.
+
+Before compose the matrix for the `svd` the data were been normalized exploiting the function `get_normalized_transformation`.
+
+The parameters of $\omega$ were stacked in a vector $w$ and the constraints were rewritten in the form $A w = 0$, the solution for $w$ was found exploiting the `svd` then recomposed in the shape of conic $\omega$, exploiting *Cholesky* algorithm and before the de-normalization the matrix $K$ was found.
+
+$$
+K = \begin{bmatrix}
+       3067.6 &           0 &        2003 \\
+            0 &      3066.1 &      1501.4 \\
+            0 &           0 &           1
+\end{bmatrix}
+$$
+
