@@ -5,18 +5,18 @@ img_g = rgb2gray(img);
 imshow(img), hold on;
 
 HX.drawing_limits([
-				[-1*size(img,1) 2*size(img,1)];
-				[-1*size(img,2) 2*size(img,2)]]);
+				[-3*size(img,1) 3*size(img,1)];
+				[-3*size(img,2) 3*size(img,2)]]);
 
 set(0, 'DefaultLineLineWidth', 2);
 
 %% PI segments' points
 % defines the given line segments of plane PI exploiting class Seg and HX
 s1 = Seg(HX([637 1267]), HX([1270 1177]));
-s2 = Seg(HX([1410 1260]), HX([1606 1590]));
+s2 = Seg(HX([1410 1260]), HX([1607 1581]));
 s3 = Seg(HX([1797 1585]), HX([2090 1717]));
-s4 = Seg(HX([2173 1808]), HX([2690 1844]));
-s5 = Seg(HX([2734 1847]), HX([2858 1697]));
+s4 = Seg(HX([2173 1808]), HX([2687 1842]));
+s5 = Seg(HX([2740 1833]), HX([2854 1692]));
 s6 = Seg(HX([2974 1656]), HX([3944 1727]));
 
 %% Draw plane PI
@@ -48,7 +48,9 @@ sg5 = SegGroup([
 	2822.2 1539.9  2690.8 1721.2;
 	2909.9 2748.7  3033.9 2688.8;
 	2902.8 2670.4  3032.5 2598.6;
-	2879.0 1830.3  2782.7 1936.1;
+	2879.0 1830.3  2782.7 1936.1;	
+	2822 2220  2934 2118;
+	2879 1831  2784 1934;
 	]);
 
 % adds the given segments of the plane PI
@@ -80,7 +82,7 @@ v5.draw_point;
 %% Compute the line at the infinity
 % prepares the matrix v_inf for LST
 % to find the best approximation of infinity line l_inf
-v_inf = [v3.X.'; v5.X.'; v2.X.'];
+v_inf = [v3.X v5.X v2.X]';
 
 % computes the normalized data and the corresponding similar transformation
 [T, v_inf_n] = get_normalized_transformation(v_inf);
@@ -94,7 +96,7 @@ v = v / v(end);
 % reverts the data normalization
 l_inf = T' * HX(v(1:end-1)');
 
-l_inf.draw_line();
+l_inf.draw_line;
 
 %% Compute the affine rectification matrix to send l_inf to its canonical position
 H_p = [1 0 0; 0 1 0; l_inf.X.'];
@@ -306,41 +308,99 @@ v3.draw_point;
 v5.draw_point;
 
 %%
+%{
+syms l1 l2 l3 x1 x2 x3;
+syms w1 w2 w3 w4 w5;
+plucker = @(v) [0 -v(3) v(2); v(3) 0 -v(1); -v(2) v(1) 0];
+W = [
+	[w1 , 0, w3];
+	[0, w2, w4];
+	[w3, w4, w5];
+	];
+
+l = [l1 l2 l3].';
+l_p = plucker(l);
+
+A = l_p * W * [x1 x2 x3].';
+
+collect(A, [w1 w2 w3 w4 w5])
+
+A_p = @(l,v) [
+	0, -l(3)*v(2), l(2)*v(1), l(2)*v(2)-l(3)*v(3), l(2)*v(3);
+	l(3)*v(1), 0, l(3)*v(3)-l(1)*v(1), -l(1)*v(2), -l(1)*v(3);
+	-l(2)*v(1), l(1)*v(2), -l(2)*v(3), l(1)*v(3), 0;
+	];
+
+A_a = collect(A_p(l, [x1 x2 x3].')*[w1 w2 w3 w4 w5].', [w1 w2 w3 w4 w5])
+%}
+
+%%
 % consider the matrix W = (KK')^-1 and its elements w = [w1,w2,w3,w4,w5,w6]'
 % w2 = 0 due to skew factor approsimation s = 0
 % a'Wb = 0 constraints can be collected in Aw = 0
 % where each of them can be write as a row of A
 % a_i = [v1u1, v1u2+v2u1, v2u2, v1u3+v3u1, v2u3+v3u2, v3u3]
 
-a = @(v,u) [v(1)*u(1), v(1)*u(2)+v(2)*u(1), v(2)*u(2), v(1)*u(3)+v(3)*u(1), v(2)*u(3)+v(3)*u(2), v(3)*u(3)];
+% a = @(v,u) [v(1)*u(1), v(1)*u(2)+v(2)*u(1), v(2)*u(2), v(1)*u(3)+v(3)*u(1), v(2)*u(3)+v(3)*u(2), v(3)*u(3)];
 
-C = [
-	[0 1 0 0 0 0];
-	zeros([5,6]);
+% imposes an hard contraint w2=0
+% C = [
+% 	[0 1 0 0 0 0];
+% 	zeros([5,6]);
+% 	];
+% 
+% [~, ~, V] = svd(C);
+% C_p = V(:, 1+rank(C):end);
+
+% gets a normalizes transformation to rescale point
+% with the aim to reduce geometrical error in the extimation
+T = get_normalized_transformation([vv.X, v2.X, v3.X, v5.X]');
+%T = eye(3);
+
+l_inf_r = inv(T)' * l_inf;
+
+vv_r = T * vv;
+% v2_r = T * v2;
+% v3_r = T * v3;
+% v5_r = T * v5;
+
+% uses only the homography for the metric rectification
+h = H_a * H_p;
+h = T * h / T;
+h = inv(h);
+h = h/h(3,3);
+
+% structure for the constraint v W u = 0 in the form a' w = 0
+a = @(v,u) [v(1)*u(1), v(2)*u(2), v(1)*u(3)+v(3)*u(1), v(2)*u(3)+v(3)*u(2), v(3)*u(3)];
+
+% structure for the constraint [l]_x W v = 0 in the form A w = 0 
+A_p = @(l,v) [
+	0, -l(3)*v(2), l(2)*v(1), l(2)*v(2)-l(3)*v(3), l(2)*v(3);
+	l(3)*v(1), 0, l(3)*v(3)-l(1)*v(1), -l(1)*v(2), -l(1)*v(3);
+	-l(2)*v(1), l(1)*v(2), -l(2)*v(3), l(1)*v(3), 0;
 	];
 
-[~, ~, V] = svd(C);
-C_p = V(:, 1+rank(C):end);
-
-h = inv(H_a * H_p);
-%h = inv(Hi_ap);
 A = [
 	a(h(:,1), h(:,2));
-	a(h(:,1), h(:,1)) - a(h(:,2), h(:,2));
-	a(vv.X, v3.X);
-	a(vv.X, v5.X);
-	a(vv.X, v2.X);
+ 	a(h(:,1), h(:,1)) - a(h(:,2), h(:,2));
+	A_p(l_inf_r.X, vv_r.X);
+% 	a(vv_r.X, v3_r.X);
+% 	a(vv_r.X, v5_r.X);
+% 	a(vv_r.X, v2_r.X);
 	];
 
 %%%
-[~, ~, V] = svd(A*C_p);
+% [~, ~, V] = svd(A*C_p);
+% 
+% w = C_p*V(:,end);
 
-w = C_p*V(:,end);
+[~, ~, V] = svd(A);
+w = V(:,end);
 
 W = [
-	[w(1) , w(2), w(4)];
-	[w(2), w(3), w(5)];
-	[w(4), w(5), w(6)];
+	[w(1) , 0, w(3)];
+	[0, w(2), w(4)];
+	[w(3), w(4), w(5)];
 	];
 
 if all(eigs(W) < 0)
@@ -349,33 +409,56 @@ end
 
 eigs(W)
 
-K = chol(W);
-K = inv(K);
-K = K / K(3,3)
+K = inv(chol(W));
+K = T \ K;
+%K = K * T;
 
-%K =  rescale_m(1/k) * K;
+K = K / K(3,3);
 
+%% ######## G3 Localization ########
 
-M = [K, zeros(3,1)]
+H = inv(H_r * H_t * H_a * H_p);
+
+B = K \ H;
+B = B / norm(B)
+
+Rt = [B(:,1), B(:,2), cross(B(:,1), B(:,2)), B(:,3)]
+
+M = K*Rt;
+
+% finds camera center in the world reference frame
+c = null(M);
+c = c/c(4);
+c = HX(c(1:3));
+
+HX.sdraw_point(M * c);
 
 %%
-imshow(img, "InitialMagnification", "fit")
+figure, imshow(img_g), hold on;
+
+x_axis = M * Seg(HX([0 0 0]), HX([500 0 0]));
+y_axis = M * Seg(HX([0 0 0]), HX([0 500 0]));
+z_axis = M * Seg(HX([0 0 0]), HX([0 0 5000000]));
+
+x_axis.draw("Color", "red");
+y_axis.draw("Color", "green");
+z_axis.draw("Color", "blue");
+
 %%
-% HX.scale_factor(1);
-% P1 = HX([2000 2000 10000]);
-% 
-% p1 = M * P1
-% 
-% p1.draw_point;
-% 
-
-
-
-
-
-
-
-
+s1.draw;
+s2.draw;
+s3.draw;
+s4.draw;
+s5.draw;
+s6.draw;
+HX.sdraw_point(M * HX([0 0 0]));
+HX.sdraw_point(M * HX([0 0 0]));
+HX.sdraw_point(M * HX([0 1623 0]));
+HX.sdraw_point(M * HX([2951 2851 0]));
+HX.sdraw_point(M * HX([0 0 -10000000]));
+%HX.sdraw_point(M * HX([0 0 0]), "Color", "c");
+%HX.sdraw_point(M * HX([0 0 0]), "Color", "y");
+%HX.sdraw_point(M * HX([0 0 0]), "Color", "k");
 
 
 %%
