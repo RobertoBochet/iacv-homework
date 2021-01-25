@@ -407,38 +407,42 @@ if all(eigs(W) < 0)
 	W = -W;
 end
 
-eigs(W)
-
 K = inv(chol(W));
 K = T \ K;
-%K = K * T;
 
 K = K / K(3,3);
 
 %% ######## G3 Localization ########
+% computes the inverse of the metric homography
+H = inv(H_s * H_r * H_t * H_a * H_p);
 
-H = inv(H_r * H_t * H_a * H_p);
-
+% [rx ry t] = K^-1 H
 B = K \ H;
-B = B / norm(B)
+%B = B / norm(B)
 
-Rt = [B(:,1), B(:,2), cross(B(:,1), B(:,2)), B(:,3)]
+t = B(:,3);
+rx = B(:,1);
+ry = B(:,2);
+% the rz completes the frame rx-ry
+rz = cross(rx / norm(rx), ry / norm(ry)) * norm(rx);
+
+Rt = [rx, ry, rz, t];
 
 M = K*Rt;
 
-% finds camera center in the world reference frame
+%% Find the camera center in the world reference frame
 c = null(M);
 c = c/c(4);
 c = HX(c(1:3));
 
-HX.sdraw_point(M * c);
-
-%%
+%% Plot the world reference frame
 figure, imshow(img_g), hold on;
 
-x_axis = M * Seg(HX([0 0 0]), HX([500 0 0]));
-y_axis = M * Seg(HX([0 0 0]), HX([0 500 0]));
-z_axis = M * Seg(HX([0 0 0]), HX([0 0 5000000]));
+k = 1;
+
+x_axis = M * Seg(HX([0 0 0]), k*HX([1 0 0]));
+y_axis = M * Seg(HX([0 0 0]), k*HX([0 1 0]));
+z_axis = M * Seg(HX([0 0 0]), k*HX([0 0 1]));
 
 x_axis.draw("Color", "red");
 y_axis.draw("Color", "green");
