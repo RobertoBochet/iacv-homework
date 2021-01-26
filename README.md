@@ -1,5 +1,5 @@
 ---
-documentclass: scrreprt
+documentclass: scrartcl
 fontsize: 14pt
 header-includes: |
   \makeatletter
@@ -8,7 +8,20 @@ header-includes: |
 ---
 # IACV homework
 
-## Geometry
+## Image processing ([`hw_processing.m`](./hw_processing.m))
+
+### F1 - Feature extraction
+
+First thing I cropped the image to reduce sky area which is useless in the feature detection process.
+
+#### Sky mask
+
+Before adjust the image contrast, I tried to remove as much sky as possible, which could reduce the quality of the contrast improvement.
+I changed the space color of the image to the *HSV* then I selected only a small subset of the value *V*; in order to improve the quality of the mask I applied an iteration of `imdilate`. So I got a sky mask.
+
+![sky masked](./output/sky_masked.png){height=250px}
+
+## Geometry ([`hw_geometry.m`](./hw_geometry.m))
 
 ### Functions and class
 
@@ -150,9 +163,9 @@ The parameters of $\omega$ were stacked in a vector $w$ and the constraints were
 
 $$
 K = \begin{bmatrix}
-       3067.6 &           0 &        2003 \\
-            0 &      3066.1 &      1501.4 \\
-            0 &           0 &           1
+    3112.8 &      0 & 2009.2 \\
+    0 &      2962.5 &   1702 \\
+    0 &           0 &      1 \\
 \end{bmatrix}
 $$
 
@@ -183,3 +196,29 @@ $$
 So I could easily draw the world reference frame in the image.
 
 ![reference frame](./output/reference_frame.png){height=250px}
+
+### G4 - Reconstruction
+
+I chose to rectify the facade idetified by the line segment 1 of the plane $\Pi$.
+First thing I put a comfortable reference frame on the facade 1 computing the transformation from the world frame to the new frame $T_f^w$
+
+$$
+T_f^w = \begin{bmatrix}
+    1 &  0 & 0 & -9 \\
+    0 &  0 & 1 & 0 \\
+    0 & -1 & 0 & 0 \\
+    0 &  0 & 0 & 1 \\
+\end{bmatrix}
+$$
+
+Then I computed the camera matrix expressed in the new reference frame as $M_f = M T_f^w$, so I was able to express all the points in the facade 1 in a simple way.
+
+![reference frame on facade 1](./output/reference_frame_facade1.png){height=250px}
+
+I defined 4 rectangle corners in the 3D world expressed in the new reference frame $[0, 0, 0]', [9, 0, 0]', [9, 12, 0]', [0, 12, 0]'$, and exploiting $M_f$ I found them projections in the image.
+
+![rectangle on facade 1](./output/rectangle_facade1.png){height=250px}
+
+Having 4 points in a plane in 3D space and them projections in the image I could define a homography that rectify the facade 1.
+
+![rectified facade 1](./output/rectified_facade1.png){height=250px}
