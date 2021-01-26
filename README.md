@@ -163,9 +163,9 @@ The parameters of $\omega$ were stacked in a vector $w$ and the constraints were
 
 $$
 K = \begin{bmatrix}
-    3112.8 &      0 & 2009.2 \\
-    0 &      2962.5 &   1702 \\
-    0 &           0 &      1 \\
+    3113 &      0 & 2007.5 \\
+       0 & 2983.2 & 1671.8 \\
+       0 &      0 &      1 \\
 \end{bmatrix}
 $$
 
