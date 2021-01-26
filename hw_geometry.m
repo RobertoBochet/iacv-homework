@@ -270,50 +270,20 @@ vv = sgv.find_vanish_point;
 % draws the vertical vanish point
 vv.draw_point;
 
-%%
-%{
-syms l1 l2 l3 x1 x2 x3;
-syms w1 w2 w3 w4 w5;
-plucker = @(v) [0 -v(3) v(2); v(3) 0 -v(1); -v(2) v(1) 0];
-W = [
-	[w1 , 0, w3];
-	[0, w2, w4];
-	[w3, w4, w5];
-	];
-
-l = [l1 l2 l3].';
-l_p = plucker(l);
-
-A = l_p * W * [x1 x2 x3].';
-
-collect(A, [w1 w2 w3 w4 w5])
-
-A_p = @(l,v) [
-	0, -l(3)*v(2), l(2)*v(1), l(2)*v(2)-l(3)*v(3), l(2)*v(3);
-	l(3)*v(1), 0, l(3)*v(3)-l(1)*v(1), -l(1)*v(2), -l(1)*v(3);
-	-l(2)*v(1), l(1)*v(2), -l(2)*v(3), l(1)*v(3), 0;
-	];
-
-A_a = collect(A_p(l, [x1 x2 x3].')*[w1 w2 w3 w4 w5].', [w1 w2 w3 w4 w5])
-%}
-
-%%
+%% Compute K matrix
 % consider the matrix W = (KK')^-1 and its elements w = [w1,w2,w3,w4,w5,w6]'
+% needs to solve W for some constraints in the form A w = 0
 % w2 = 0 due to skew factor approsimation s = 0
-% a'Wb = 0 constraints can be collected in Aw = 0
-% where each of them can be write as a row of A
-% a_i = [v1u1, v1u2+v2u1, v2u2, v1u3+v3u1, v2u3+v3u2, v3u3]
 
-% a = @(v,u) [v(1)*u(1), v(1)*u(2)+v(2)*u(1), v(2)*u(2), v(1)*u(3)+v(3)*u(1), v(2)*u(3)+v(3)*u(2), v(3)*u(3)];
+% imposes the hard contraint w2=0
+C = [
+	[0 1 0 0 0 0];
+ 	zeros([5,6]);
+ 	];
 
-% imposes an hard contraint w2=0
-% C = [
-% 	[0 1 0 0 0 0];
-% 	zeros([5,6]);
-% 	];
-% 
-% [~, ~, V] = svd(C);
-% C_p = V(:, 1+rank(C):end);
+% gets the constraints matrix
+[~, ~, V] = svd(C);
+C_p = V(:, 1+rank(C):end);
 
 % gets a normalizes transformation to rescale point
 % with the aim to reduce geometrical error in the extimation
@@ -333,13 +303,13 @@ h = inv(h);
 h = h/h(3,3);
 
 % structure for the constraint v W u = 0 in the form a w = 0
-a = @(v,u) [v(1)*u(1), v(2)*u(2), v(1)*u(3)+v(3)*u(1), v(2)*u(3)+v(3)*u(2), v(3)*u(3)];
+a = @(v,u) [v(1)*u(1), v(1)*u(2)+v(2)*u(1), v(2)*u(2), v(1)*u(3)+v(3)*u(1), v(2)*u(3)+v(3)*u(2), v(3)*u(3)];
 
 % structure for the constraint [l]_x W v = 0 in the form A w = 0 
 A_p = @(l,v) [
-	0, -l(3)*v(2), l(2)*v(1), l(2)*v(2)-l(3)*v(3), l(2)*v(3);
-	l(3)*v(1), 0, l(3)*v(3)-l(1)*v(1), -l(1)*v(2), -l(1)*v(3);
-	-l(2)*v(1), l(1)*v(2), -l(2)*v(3), l(1)*v(3), 0;
+	0, -l(3)*v(1), -l(3)*v(2), l(2)*v(1), l(2)*v(2)-l(3)*v(3), l(2)*v(3);
+	l(3)*v(1), l(3)*v(2), 0, l(3)*v(3)-l(1)*v(1), -l(1)*v(2), -l(1)*v(3);
+	-l(2)*v(1), l(1)*v(1)-l(2)*v(2), l(1)*v(2), -l(2)*v(3), l(1)*v(3), 0;
 	];
 
 % defines the constraints matrix for the form A w = 0
@@ -349,20 +319,15 @@ A = [
 	A_p(l_inf_r.X, vv_r.X);
 	];
 
-%%%
-% [~, ~, V] = svd(A*C_p);
-% 
-% w = C_p*V(:,end);
-
 % finds the solution for w
-[~, ~, V] = svd(A);
-w = V(:,end);
+ [~, ~, V] = svd(A*C_p);
+ w = C_p*V(:,end);
 
 % recomposes the conical
 W = [
-	[w(1) , 0, w(3)];
-	[0, w(2), w(4)];
-	[w(3), w(4), w(5)];
+	[w(1) , w(2), w(4)];
+	[w(2), w(3), w(5)];
+	[w(4), w(5), w(6)];
 	];
 
 % inveres the matrix if it is negative definite
