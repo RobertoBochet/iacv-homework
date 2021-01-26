@@ -1,26 +1,11 @@
 classdef HX	
 	properties
 		X (:,1)
-		ScaleFactor(1,1) double = 1
 	end
 	
 	methods(Static)
 		function r = is(obj)
 			r = isa(obj,'HX');
-		end
-		
-		function out = scale_factor(val)
-			persistent scale_factor;
-			
-			if isempty(scale_factor)
-				scale_factor = 1;
-			end
-			
-			if nargin
-				scale_factor = val;
-			end
-			
-			out = scale_factor;
 		end
 		
 		function out = drawing_limits(val)
@@ -36,22 +21,16 @@ classdef HX
 			
 			out = drawing_limits;
 		end
+		
+		function sdraw_point(obj)
+			obj.draw_point();
+		end
 	end
 	
 	methods
-		function obj = HX(x, rescaling_option, scale_factor)
+		function obj = HX(x)
 			arguments
 				x (1,:)
-				rescaling_option (1,1) string {mustBeMember(rescaling_option,{'rescale','no_rescale','is_rescaled'})} = "rescale"
-				scale_factor (1,1) double = HX.scale_factor
-			end
-			
-			if rescaling_option == "rescale"
-				obj.ScaleFactor = scale_factor;
-				x = x * obj.ScaleFactor;
-			
-			elseif rescaling_option == "is_rescaled"
-				obj.ScaleFactor = scale_factor;
 			end
 			
 			obj.X = [x 1].';
@@ -62,52 +41,41 @@ classdef HX
 		end
 		
 		function r = mtimes(obj1,obj2)
-			if HX.is(obj1) && HX.is(obj2)
+			arguments
+				obj1
+				obj2 HX
+			end
+			
+			if HX.is(obj1)
 				r = cross(obj1.X, obj2.X);
-			elseif HX.is(obj2)
+			else
 				r = obj1 * obj2.X;
 			end
 			
 			r = r/r(end);
-			r = HX(r(1:end-1).', "is_rescaled", obj2.ScaleFactor);
-		end
-		
-		function obj = r(obj, f)
-			%R rescales the cartesian coordinates
-			obj = obj.normalize();
-			obj.X(1:end-1) = obj.X(1:end-1)*f;
+			r = HX(r(1:end-1).');
 		end
 		
 		function x = cart(obj)
-			obj = obj.normalize();
-			
-			x = obj.X(1:end-1);
-			
-			x = x / obj.ScaleFactor;
+			%CART Returns the cartesian coordinates
+			x = obj.normalize().X(1:end-1);
 		end
-		
-		function obj = rescale(obj)
-			obj.X = [obj.cart.' 1].';
-			obj.ScaleFactor = 1;
-		end
-		
+				
 		function draw_point(obj, options)
+			%DRAW_POINT Draws the point
 			arguments
-				obj
+				obj HX
 				options.Marker string = "x"
 				options.Color string = "b"
 				options.MarkerSize double = 10
 			end
 			
-			coord = obj.cart;
-			plot(coord(1), coord(2), options);
+			p = obj.cart;
+			plot(p(1), p(2), options);
 		end
 		
-		function draw_line(obj)
-			arguments
-				obj
-				%limits(2,2) double = [-3000; 6000]
-			end
+		function draw_line(obj, varargin)
+			%DRAW_LINE Draws the line
 			
 			l = obj.normalize().X;
 			
@@ -132,7 +100,9 @@ classdef HX
 				end
 			end
 			
- 			Seg(HX(p(1,:)), HX(p(2,:))).draw("Color", "m");
+			if size(p,1) >= 2
+				Seg(HX(p(1,:)), HX(p(2,:))).draw(varargin{:});
+			end
 		end
 	end
 end

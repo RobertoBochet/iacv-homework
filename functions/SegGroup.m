@@ -1,5 +1,5 @@
 classdef SegGroup
-	%SEGGROUP A group of Seg
+	%SEGGROUP It is a group of Seg
 	
 	methods(Static)
 		function r = is(obj)
@@ -18,28 +18,58 @@ classdef SegGroup
 			end			
 		end
 		
-		function obj = plus(obj,seg)
-			if SegGroup.is(obj) && Seg.is(seg)
-				obj.Segments(end+1) = seg;				
+		function obj = plus(obj, seg)
+			%PLUS Adds the Seg to the SegGroup
+			arguments
+				obj(1,1) SegGroup
+				seg(1,1) Seg
+			end
+			
+			obj.Segments(end+1) = seg;
+		end
+		
+		function obj2 = mtimes(obj1, obj2)
+			%MTIMES Returns a segment group where a linear application
+			%was used on them segment
+			arguments
+				obj1
+				obj2(1,1) SegGroup
+			end
+			
+			for i=1:size(obj2.Segments,1)
+				obj2.Segments(i) = obj1 * obj2.Segments(i); 
 			end
 		end
 		
+% 		function r = subsref(obj, index)
+% 			%SUBSINDEX Returns the i-th segment
+% 			arguments
+% 				obj(1,1) SegGroup
+% 				index
+% 			end
+% 			index
+% 			
+% 			r = obj.Segments(index);
+% 		end
+		
 		function draw(obj)
-			%DRAW Draws all the segments
+			%DRAW Draws all the segments in the group
 			for i=1:size(obj.Segments,1)
 				obj.Segments(i).draw;
 			end
 		end
 		
-		function draw_to(obj, l, options)
+		function draw_to(obj, l, varargin)
 			arguments
-				obj
+				obj(1,1) SegGroup
 				l(1,1) HX
-				options.Color string = "r"
+			end
+			arguments (Repeating)
+				varargin
 			end
 			
 			for i=1:size(obj.Segments,1)
-				obj.Segments(i).draw_to(l);
+				obj.Segments(i).draw_to(l, varargin{:});
 			end
 		end
 		
@@ -80,7 +110,7 @@ classdef SegGroup
 			
 			v = T'*v;
 
-			v = HX(v(1:end-1).', "is_rescaled");
+			v = HX(v(1:end-1).');
 		end
 	end
 end
