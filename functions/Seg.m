@@ -32,7 +32,7 @@ classdef Seg
 			arguments
 				obj Seg
 				options.Color string = "r"
-				options.LineWidth = 2
+				options.LineWidth = 3
 			end
 			
 			p1 = obj.P(1).cart;
@@ -55,7 +55,7 @@ classdef Seg
 			pu = obj.line * line;
 			
 			s1 = Seg(obj.P(1), pu);
-			s2 = Seg(obj.P(1), pu);
+			s2 = Seg(obj.P(2), pu);
 			
 			% selects the other point that is furthest away
 			if s1.length > s2.length

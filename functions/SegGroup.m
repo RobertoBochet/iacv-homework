@@ -52,10 +52,10 @@ classdef SegGroup
 % 			r = obj.Segments(index);
 % 		end
 		
-		function draw(obj)
+		function draw(obj, varargin)
 			%DRAW Draws all the segments in the group
 			for i=1:size(obj.Segments,1)
-				obj.Segments(i).draw;
+				obj.Segments(i).draw(varargin{:});
 			end
 		end
 		
