@@ -1,12 +1,6 @@
 classdef SegGroup
 	%SEGGROUP It is a group of Seg
 	
-	methods(Static)
-		function r = is(obj)
-			r = isa(obj,'SegGroup');
-		end
-	end
-	
 	properties
 		Segments(:,1) Seg
 	end
@@ -40,17 +34,6 @@ classdef SegGroup
 				obj2.Segments(i) = obj1 * obj2.Segments(i); 
 			end
 		end
-		
-% 		function r = subsref(obj, index)
-% 			%SUBSINDEX Returns the i-th segment
-% 			arguments
-% 				obj(1,1) SegGroup
-% 				index
-% 			end
-% 			index
-% 			
-% 			r = obj.Segments(index);
-% 		end
 		
 		function draw(obj, varargin)
 			%DRAW Draws all the segments in the group
