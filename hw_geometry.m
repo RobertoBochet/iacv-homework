@@ -12,14 +12,7 @@ set(0, 'DefaultLineLineWidth', 2);
 set(0, 'DefaultLineLineJoin', "round");
 
 %% PI segments' points
-% defines the given line segments of plane PI exploiting class Seg and HX
-s1 = Seg(HX([637 1267]), HX([1270 1177]));
-s2 = Seg(HX([1410 1260]), HX([1607 1581]));
-s3 = Seg(HX([1797 1585]), HX([2090 1717]));
-s4 = Seg(HX([2173 1808]), HX([2687 1842]));
-s5 = Seg(HX([2740 1833]), HX([2854 1692]));
-s6 = Seg(HX([2974 1656]), HX([3944 1727]));
-
+% defines the given line segments of plane PI
 sgpi = SegGroup([
 	637 1267  1270 1177;
 	1410 1260  1607 1581;
@@ -31,14 +24,6 @@ sgpi = SegGroup([
 
 % draws palne PI
 sgpi.draw;
-
-%% Draw plane PI
-s1.draw;
-s2.draw;
-s3.draw;
-s4.draw;
-s5.draw;
-s6.draw;
 
 %% Add parallel lines to PI
 % defines additional line segments paraller to the plane PI
@@ -71,15 +56,18 @@ sg2 = sg2 + sgpi.Segments(2);
 sg3 = sg3 + sgpi.Segments(3);
 sg5 = sg5 + sgpi.Segments(5);
 
+% draws the parallel segment lines
 sg2.draw;
 sg3.draw;
 sg5.draw;
+
 %%
 limit = Seg(HX(1.3*[0,size(img,1)]),HX(1.3*size(img,2,1))).line;
 
-sg2.draw_to(limit);
-sg3.draw_to(limit);
-sg5.draw_to(limit);
+% draws the prolugation of the parallel segment lines
+sg2.draw_to(limit, "Color", "g", "LineWidth", 1);
+sg3.draw_to(limit, "Color", "c", "LineWidth", 1);
+sg5.draw_to(limit, "Color", "m", "LineWidth", 1);
 
 %% Compute the vanish points
 % searches the best approximation for the vanish points 
@@ -88,6 +76,7 @@ v2 = sg2.find_vanish_point;
 v3 = sg3.find_vanish_point;
 v5 = sg5.find_vanish_point;
 
+% draws the vanish points
 v2.draw_point;
 v3.draw_point;
 v5.draw_point;
@@ -114,7 +103,7 @@ l_inf.draw_line("Color","blue");
 %% Compute the affine rectification matrix to send l_inf to its canonical position
 H_p = [1 0 0; 0 1 0; l_inf.X.'];
 
-%% Show the rectificated image
+%% Show the affine rectificated image
 img_a = imwarp(img, projective2d(H_p.'));
 figure; imshow(img_a), hold on;
 
@@ -123,7 +112,7 @@ figure; imshow(img_a), hold on;
 sgpi_a = H_p * sgpi;
 
 % draws the affine rectificated plane PI
-sgpi_a.draw
+sgpi_a.draw;
 
 %% Compute the matrix to find infinite line conic via LSM
 % all the 3 couples of orthogonal lines are used
@@ -137,6 +126,7 @@ l6 = sgpi_a.Segments(6).line.X;
 % defines the shape of a single row of the 
 a = @(l,m) [l(1)*m(1), l(1)*m(2)+l(2)*m(1), l(2)*m(2)];
 
+% defines the conical contraints in the form C_d s = 0
 C_d = [
 	a(l1,l2);
 	a(l4,l5);
@@ -147,8 +137,10 @@ C_d = [
 % looks for the solution for s that minimizing ||C_d * s|| to find C_inf
 [~, ~, V] = svd(C_d);
 
+% finds the solution for C_d s = 0
 s = V(:,end);
 
+% recomposes the infinite conic and the matrix S
 C_inf = [[s(1) s(2) 0]; [s(2) s(3) 0]; [0 0 0]];
 S = [[s(1) s(2)]; [s(2) s(3)]];
 
@@ -186,7 +178,7 @@ figure; imshow(img_ap, "InitialMagnification", "fit"), hold on;
 sgpi_m = H * sgpi;
 
 % draws the metric rectified plane PI
-sgpi_m.draw
+sgpi_m.draw;
 
 %% Compute the translation to put the reference frame at the s1 s2 intersection
 % gets the intersection of the segments 1 and 2
@@ -231,6 +223,7 @@ sgpi_r.draw
 % to rescale all the points
 r_len = 5.9;
 
+% gets the lengh of the line segment 4 in the rectification
 s4_len = Seg(sgpi_r.Segments(4).line * sgpi_r.Segments(5).line, sgpi_r.Segments(5).line * sgpi_r.Segments(6).line).length;
 
 % computes the scale factor
@@ -261,17 +254,20 @@ sgv = SegGroup([
 		2769 2044  2839 2491;
 	]);
 
+% draws the verical lines
 sgv.draw;
 
 %% Draw the extension of the vertical lines
 limit = Seg(HX(-1.5*[0,size(img,1)]),HX(-1.7*size(img,2,1))).line;
 
-sgv.draw_to(limit);
+% draws the prolungations of the vertical lines
+sgv.draw_to(limit, "Color", "g", "LineWidth",1);
 
 %% Compute the vertical vanish point
 % exploits several vertical lines with LSM to reduce the error
 vv = sgv.find_vanish_point;
 
+% draws the vertical vanish point
 vv.draw_point;
 
 %%
@@ -322,22 +318,21 @@ A_a = collect(A_p(l, [x1 x2 x3].')*[w1 w2 w3 w4 w5].', [w1 w2 w3 w4 w5])
 % gets a normalizes transformation to rescale point
 % with the aim to reduce geometrical error in the extimation
 T = get_normalized_transformation([vv.X, v2.X, v3.X, v5.X]');
-%T = eye(3);
 
+% normalizes the infinity line
 l_inf_r = inv(T)' * l_inf;
 
+% normalizes the vertical vanish point
 vv_r = T * vv;
-% v2_r = T * v2;
-% v3_r = T * v3;
-% v5_r = T * v5;
 
 % uses only the homography for the metric rectification
 h = H_a * H_p;
+% normalizes the homography
 h = T * h / T;
 h = inv(h);
 h = h/h(3,3);
 
-% structure for the constraint v W u = 0 in the form a' w = 0
+% structure for the constraint v W u = 0 in the form a w = 0
 a = @(v,u) [v(1)*u(1), v(2)*u(2), v(1)*u(3)+v(3)*u(1), v(2)*u(3)+v(3)*u(2), v(3)*u(3)];
 
 % structure for the constraint [l]_x W v = 0 in the form A w = 0 
@@ -347,13 +342,11 @@ A_p = @(l,v) [
 	-l(2)*v(1), l(1)*v(2), -l(2)*v(3), l(1)*v(3), 0;
 	];
 
+% defines the constraints matrix for the form A w = 0
 A = [
 	a(h(:,1), h(:,2));
  	a(h(:,1), h(:,1)) - a(h(:,2), h(:,2));
 	A_p(l_inf_r.X, vv_r.X);
-% 	a(vv_r.X, v3_r.X);
-% 	a(vv_r.X, v5_r.X);
-% 	a(vv_r.X, v2_r.X);
 	];
 
 %%%
@@ -361,22 +354,27 @@ A = [
 % 
 % w = C_p*V(:,end);
 
+% finds the solution for w
 [~, ~, V] = svd(A);
 w = V(:,end);
 
+% recomposes the conical
 W = [
 	[w(1) , 0, w(3)];
 	[0, w(2), w(4)];
 	[w(3), w(4), w(5)];
 	];
 
+% inveres the matrix if it is negative definite
 if all(eigs(W) < 0)
 	W = -W;
 end
 
+% decomposes the conic
 K = inv(chol(W));
-K = T \ K;
 
+% renormalizes the camera matrix
+K = T \ K;
 K = K / K(3,3);
 
 %% ######## G3 Localization ########
@@ -433,6 +431,7 @@ X = [
 % maps the rectangle corners in the image
 x = [M_f * X(1); M_f * X(2); M_f * X(3); M_f * X(4)];
 
+figure; imshow(img), hold on;
 % draws the rectangle
 Seg(x(1), x(2)).draw;
 Seg(x(2), x(3)).draw;
