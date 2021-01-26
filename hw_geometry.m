@@ -9,6 +9,7 @@ HX.drawing_limits([
 				[-3*size(img,2) 3*size(img,2)]]);
 
 set(0, 'DefaultLineLineWidth', 2);
+set(0, 'DefaultLineLineJoin', "round");
 
 %% PI segments' points
 % defines the given line segments of plane PI exploiting class Seg and HX
@@ -18,6 +19,18 @@ s3 = Seg(HX([1797 1585]), HX([2090 1717]));
 s4 = Seg(HX([2173 1808]), HX([2687 1842]));
 s5 = Seg(HX([2740 1833]), HX([2854 1692]));
 s6 = Seg(HX([2974 1656]), HX([3944 1727]));
+
+sgpi = SegGroup([
+	637 1267  1270 1177;
+	1410 1260  1607 1581;
+	1797 1585  2090 1717;
+	2173 1808  2687 1842;
+	2740 1833  2854 1692;
+	2974 1656  3944 1727;
+	]);
+
+% draws palne PI
+sgpi.draw;
 
 %% Draw plane PI
 s1.draw;
@@ -54,9 +67,9 @@ sg5 = SegGroup([
 	]);
 
 % adds the given segments of the plane PI
-sg2 = sg2 + s2;
-sg3 = sg3 + s3;
-sg5 = sg5 + s5;
+sg2 = sg2 + sgpi.Segments(2);
+sg3 = sg3 + sgpi.Segments(3);
+sg5 = sg5 + sgpi.Segments(5);
 
 sg2.draw;
 sg3.draw;
@@ -96,40 +109,30 @@ v = v / v(end);
 % reverts the data normalization
 l_inf = T' * HX(v(1:end-1)');
 
-l_inf.draw_line;
+l_inf.draw_line("Color","blue");
 
 %% Compute the affine rectification matrix to send l_inf to its canonical position
 H_p = [1 0 0; 0 1 0; l_inf.X.'];
 
 %% Show the rectificated image
 img_a = imwarp(img, projective2d(H_p.'));
-figure, imshow(img_a, "InitialMagnification", "fit"), hold on;
+figure; imshow(img_a), hold on;
 
 %% Affine rectify the ortogonal segments
 % This procedure is equivalent to rectify directly the corresponding lines
-s1_a = H_p * s1;
-s2_a = H_p * s2;
-s3_a = H_p * s3;
-s4_a = H_p * s4;
-s5_a = H_p * s5;
-s6_a = H_p * s6;
+sgpi_a = H_p * sgpi;
 
-%% Draw the affine rectificated plane PI
-s1_a.draw;
-s2_a.draw;
-s3_a.draw;
-s4_a.draw;
-s5_a.draw;
-s6_a.draw;
+% draws the affine rectificated plane PI
+sgpi_a.draw
 
 %% Compute the matrix to find infinite line conic via LSM
 % all the 3 couples of orthogonal lines are used
 % (istead of only 2) to reduce error
-l1 = s1_a.line.X;
-l2 = s2_a.line.X;
-l4 = s4_a.line.X;
-l5 = s5_a.line.X;
-l6 = s6_a.line.X;
+l1 = sgpi_a.Segments(1).line.X;
+l2 = sgpi_a.Segments(2).line.X;
+l4 = sgpi_a.Segments(4).line.X;
+l5 = sgpi_a.Segments(5).line.X;
+l6 = sgpi_a.Segments(6).line.X;
 
 % defines the shape of a single row of the 
 a = @(l,m) [l(1)*m(1), l(1)*m(2)+l(2)*m(1), l(2)*m(2)];
@@ -152,13 +155,14 @@ S = [[s(1) s(2)]; [s(2) s(3)]];
 %% Looking for affine trasformation to map c_inf to its canonical position
 [U,D,V] = svd(S);
 
+% defines the affine transformation from svd
 H_a = diag([0 0 1]);
 H_a(1:2,1:2) = U*sqrt(D)*V';
 
 % invert H_a
 H_a = eye(3) / H_a;
 
-% removes the possible mirroring effect given by affine transformation
+% removes the eventual mirror effect given by affine transformation
 if H_a(1,1) < 0
 	H_a = H_a * diag([-1 1 1]);
 end
@@ -169,86 +173,65 @@ end
 % computes the complessive homography
 H = H_a * H_p;
 
-%% Show the rectificated image
-%Hi_a = rescale_h(H_a);
+%% Show the rectified image
+% required code to preserve the image reference frame 
 sameAsInput = affineOutputView(size(img_a),affine2d(H_a.'),'BoundsStyle','SameAsInput');
 
-%Hi = rescale_h(H_a * H_p);
 img_ap = imwarp(img, projective2d(H.'),'OutputView',sameAsInput);
 
-figure, imshow(img_ap, "InitialMagnification", "fit"), hold on;
+figure; imshow(img_ap, "InitialMagnification", "fit"), hold on;
 
 %% Draw PI on the metric image
-s1_m = H * s1;
-s2_m = H * s2;
-s3_m = H * s3;
-s4_m = H * s4;
-s5_m = H * s5;
-s6_m = H * s6;
+% projects the plane PI on the metric rectified image
+sgpi_m = H * sgpi;
 
-s1_m.draw;
-s2_m.draw;
-s3_m.draw;
-s4_m.draw;
-s5_m.draw;
-s6_m.draw;
+% draws the metric rectified plane PI
+sgpi_m.draw
 
 %% Compute the translation to put the reference frame at the s1 s2 intersection
+% gets the intersection of the segments 1 and 2
+o = sgpi_m.Segments(1).line * sgpi_m.Segments(2).line;
 
-o = s1_m.line * s2_m.line;
-
+% computes the translation to put the intersection in the origin
 H_t = [eye(2), -o.X(1:2);zeros(2,1)' 1];
 
 H = H_t * H_a * H_p;
 
 %% Draw PI
-s1_t = H * s1;
-s2_t = H * s2;
-s3_t = H * s3;
-s4_t = H * s4;
-s5_t = H * s5;
-s6_t = H * s6;
+sgpi_t = H * sgpi;
 
-figure, hold on, daspect([1 1 1]);
-s1_t.draw;
-s2_t.draw;
-s3_t.draw;
-s4_t.draw;
-s5_t.draw;
-s6_t.draw;
+figure; hold on, daspect([1 1 1]);
+sgpi_t.draw
 
-%% Rotate the frame
-% puts the segment s2 on the y-axis
+%% Rotate the reference frame
+% puts the segment 2 on the y-axis
+
+% defines a rotation matrix on z-axis
 rotz = @(t) [cos(t) -sin(t) 0 ; sin(t) cos(t) 0 ; 0 0 1];
 
-p = s2_t.P(1).cart();
+% retrieves a point of the segment 2
+p = sgpi_t.Segments(2).P(1).cart();
+
+% computes the angle between segment 2 and y-axis
 theta = atan2(p(2), p(1));
 
+% defines the rotation to put segment 2 on the y-axis
 H_r = rotz(pi/2-theta);
 
 H = H_r * H_t * H_a * H_p;
 
 %% Draw PI
-s1_r = H * s1;
-s2_r = H * s2;
-s3_r = H * s3;
-s4_r = H * s4;
-s5_r = H * s5;
-s6_r = H * s6;
+sgpi_r = H * sgpi;
 
 figure, hold on, daspect([1 1 1]);
-s1_r.draw;
-s2_r.draw;
-s3_r.draw;
-s4_r.draw;
-s5_r.draw;
-s6_r.draw;
+sgpi_r.draw
 
 %% Rescale the frame
-% uses the real (approximal) size in meter of the line segment s4
+% uses the real (approximated) size in meter of the line segment 4
 % to rescale all the points
 r_len = 5.9;
-s4_len = Seg(s4_r.line * s5_r.line, s5_r.line * s6_r.line).length;
+
+s4_len = Seg(sgpi_r.Segments(4).line * sgpi_r.Segments(5).line, sgpi_r.Segments(5).line * sgpi_r.Segments(6).line).length;
 
 % computes the scale factor
 s = r_len / s4_len;
@@ -260,20 +243,10 @@ H_s = diag([s s 1]);
 H = H_s * H_r * H_t * H_a * H_p;
 
 %% Draw PI rescaled
-s1_s = H * s1;
-s2_s = H * s2;
-s3_s = H * s3;
-s4_s = H * s4;
-s5_s = H * s5;
-s6_s = H * s6;
+sgpi_s = H * sgpi;
 
 figure, hold on, daspect([1 1 1]);
-s1_s.draw;
-s2_s.draw;
-s3_s.draw;
-s4_s.draw;
-s5_s.draw;
-s6_s.draw;
+sgpi_s.draw
 
 %% ######## G2 Calibration ########
 figure, imshow(img), hold on;
@@ -300,12 +273,6 @@ sgv.draw_to(limit);
 vv = sgv.find_vanish_point;
 
 vv.draw_point;
-
-%% Draw vanish points for plane 2,3 and 5
-
-v2.draw_point;
-v3.draw_point;
-v5.draw_point;
 
 %%
 %{
@@ -418,7 +385,6 @@ H = inv(H_s * H_r * H_t * H_a * H_p);
 
 % [rx ry t] = K^-1 H
 B = K \ H;
-%B = B / norm(B)
 
 t = B(:,3);
 rx = B(:,1);
@@ -428,6 +394,7 @@ rz = cross(rx / norm(rx), ry / norm(ry)) * norm(rx);
 
 Rt = [rx, ry, rz, t];
 
+% defines the camera matrix in the world frame
 M = K*Rt;
 
 %% Find the camera center in the world reference frame
@@ -436,33 +403,53 @@ c = c/c(4);
 c = HX(c(1:3));
 
 %% Plot the world reference frame
-figure, imshow(img_g), hold on;
+figure; imshow(img), hold on;
 
-k = 1;
+% plots the reference frame
+draw_axis(M);
 
-x_axis = M * Seg(HX([0 0 0]), k*HX([1 0 0]));
-y_axis = M * Seg(HX([0 0 0]), k*HX([0 1 0]));
-z_axis = M * Seg(HX([0 0 0]), k*HX([0 0 1]));
+%% G4 - Reconstruction
+figure; imshow(img), hold on;
 
-x_axis.draw("Color", "red");
-y_axis.draw("Color", "green");
-z_axis.draw("Color", "blue");
+%% Set a new reference frame on the facade 1
+% defines the transformation between the world frame and the facade 1 frame
+T_w_f = [[[1 0 0]; [0 0 -1]; [0 1 0]]' [-9 0 0]'; zeros(1,3) 1];
 
-%%
-s1.draw;
-s2.draw;
-s3.draw;
-s4.draw;
-s5.draw;
-s6.draw;
-HX.sdraw_point(M * HX([0 0 0]));
-HX.sdraw_point(M * HX([0 0 0]));
-HX.sdraw_point(M * HX([0 1623 0]));
-HX.sdraw_point(M * HX([2951 2851 0]));
-HX.sdraw_point(M * HX([0 0 -10000000]));
-%HX.sdraw_point(M * HX([0 0 0]), "Color", "c");
-%HX.sdraw_point(M * HX([0 0 0]), "Color", "y");
-%HX.sdraw_point(M * HX([0 0 0]), "Color", "k");
+% defines the new camera matrix for the facade 1 frame 
+M_f = M * T_w_f;
 
+% plots the reference frame
+draw_axis(M_f);
 
-%%
+%% Define the image area of the facade 1
+% defines the rectangle on the facede in the facade 1 frame
+X = [
+	HX([0 0 0]);
+	HX([9 0 0]);
+	HX([9 12 0]);
+	HX([0 12 0]);
+	];
+
+% maps the rectangle corners in the image
+x = [M_f * X(1); M_f * X(2); M_f * X(3); M_f * X(4)];
+
+% draws the rectangle
+Seg(x(1), x(2)).draw;
+Seg(x(2), x(3)).draw;
+Seg(x(3), x(4)).draw;
+Seg(x(4), x(1)).draw;
+
+%% Rectify the facade 1
+
+% defines the points in the image
+x_img = [x(1).cart x(2).cart x(3).cart x(4).cart]';
+% defines the corresponding points in the desidered output image
+x_new = 100*[X(1).cart, X(2).cart, X(3).cart, X(4).cart]';
+% drops the coordinate Z (it is always 0)
+x_new = x_new(:, 1:2);
+
+% creates the homography exploiting correspondence of the points
+T = fitgeotrans(x_img, x_new, "projective");
+
+% plots the rectified facade
+figure, imshow(imwarp(img,T)), hold on;
