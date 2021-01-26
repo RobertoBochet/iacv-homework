@@ -73,36 +73,27 @@ classdef SegGroup
 			end
 		end
 		
-		function a = get_lines_matrix(obj)
-			a = zeros(size(obj.Segments,1), size(obj.Segments(1).line.X, 1));
+		function T = get_normalized_transformation(obj)
+			P = zeros(2 * size(obj.Segments,1), 3);
 			
 			for i=1:size(obj.Segments,1)
-				a(i,:) = obj.Segments(i).line.X.';
+				P(2*i-1,:) = obj.Segments(i).P(1).X;
+				P(2*i,:) = obj.Segments(i).P(2).X;
 			end
+			
+			T = get_normalized_transformation(P);			
+			T = inv(T)';
 		end
 		
-		function [A, T] = get_normailzed_lines_matrix(obj)
-			A = obj.get_lines_matrix;
+		function v = find_vanish_point(obj)			
+			T = obj.get_normalized_transformation;
 			
-			xr = mean(A(:,1));
-			yr = mean(A(:,2));
+			A = zeros(size(obj.Segments,1), 3);
 			
-			d = mean(sqrt((A(:,1) - xr).^2 + (A(:,2) - yr).^2));
+			for i=1:size(obj.Segments,1)
+				A(i,:) = (T * obj.Segments(i).line.X)';
+			end			
 			
-			T = [
-				[sqrt(2)/d 0 0];
-				[0 sqrt(2)/d 0];
-				[0 0 1];
-				%[-sqrt(2)*xr/d -sqrt(2)*yr/d 1];
-			];
-		
-			for i=1:size(A,1)
-				A(i,:) = (T * A(i,:).').';
-			end
-		end
-		
-		function v = find_vanish_point(obj)
-			[A, T] = obj.get_normailzed_lines_matrix;
 			[~, ~, V] = svd(A);
 
 			v = V(:, end);

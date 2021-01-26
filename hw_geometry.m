@@ -128,9 +128,9 @@ a = @(l,m) [l(1)*m(1), l(1)*m(2)+l(2)*m(1), l(2)*m(2)];
 
 % defines the conical contraints in the form C_d s = 0
 C_d = [
-	a(l1,l2);
-	a(l4,l5);
-	a(l5,l6);
+	a(l1, l2);
+	a(l4, l5);
+	a(l5, l6);
 	];
 
 %% Searching the infinite line conic in affine rectificated image
@@ -171,7 +171,7 @@ sameAsInput = affineOutputView(size(img_a),affine2d(H_a.'),'BoundsStyle','SameAs
 
 img_ap = imwarp(img, projective2d(H.'),'OutputView',sameAsInput);
 
-figure; imshow(img_ap, "InitialMagnification", "fit"), hold on;
+figure; imshow(img_ap), hold on;
 
 %% Draw PI on the metric image
 % projects the plane PI on the metric rectified image
@@ -215,7 +215,7 @@ H = H_r * H_t * H_a * H_p;
 %% Draw PI
 sgpi_r = H * sgpi;
 
-figure, hold on, daspect([1 1 1]);
+figure; hold on, daspect([1 1 1]);
 sgpi_r.draw
 
 %% Rescale the frame
@@ -238,11 +238,11 @@ H = H_s * H_r * H_t * H_a * H_p;
 %% Draw PI rescaled
 sgpi_s = H * sgpi;
 
-figure, hold on, daspect([1 1 1]);
+figure; hold on, daspect([1 1 1]);
 sgpi_s.draw
 
 %% ######## G2 Calibration ########
-figure, imshow(img), hold on;
+figure; imshow(img), hold on;
 
 %% Add veritical lines
 sgv = SegGroup([
