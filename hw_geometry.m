@@ -4,12 +4,10 @@ img = imread('input.jpg');
 img_g = rgb2gray(img);
 imshow(img), hold on;
 
+% sets the drawing limits for the lines
 HX.drawing_limits([
 				[-3*size(img,1) 3*size(img,1)];
 				[-3*size(img,2) 3*size(img,2)]]);
-
-set(0, 'DefaultLineLineWidth', 2);
-set(0, 'DefaultLineLineJoin', "round");
 
 %% PI segments' points
 % defines the given line segments of plane PI
@@ -296,6 +294,7 @@ l_inf_r = inv(T)' * l_inf;
 vv_r = T * vv;
 
 % uses only the homography for the metric rectification
+% H_s, H_r, H_t do not contribute to change the result
 h = H_a * H_p;
 % normalizes the homography
 h = T * h / T;
@@ -346,14 +345,16 @@ K = K / K(3,3);
 % computes the inverse of the metric homography
 H = inv(H_s * H_r * H_t * H_a * H_p);
 
-% [rx ry t] = K^-1 H
+% [rx ry t] = s*(K^-1 H)
 B = K \ H;
+% removes s exploiting ||rx|| = 1
+B = B / norm(B(:,1));
 
 t = B(:,3);
 rx = B(:,1);
 ry = B(:,2);
 % the rz completes the frame rx-ry
-rz = cross(rx / norm(rx), ry / norm(ry)) * norm(rx);
+rz = cross(rx, ry);
 
 Rt = [rx, ry, rz, t];
 
@@ -371,7 +372,7 @@ figure; imshow(img), hold on;
 % plots the reference frame
 draw_axis(M);
 
-%% G4 - Reconstruction
+%% ######## G4 Reconstruction ########
 figure; imshow(img), hold on;
 
 %% Set a new reference frame on the facade 1
@@ -389,8 +390,8 @@ draw_axis(M_f);
 X = [
 	HX([0 0 0]);
 	HX([9 0 0]);
-	HX([9 12 0]);
-	HX([0 12 0]);
+	HX([9 14 0]);
+	HX([0 14 0]);
 	];
 
 % maps the rectangle corners in the image
