@@ -171,35 +171,58 @@ $$
 
 ### G3 - Localization
 
-To compute the extrinsic parameters of the camera I used the knowledge of the metric rectification.
-Indeed the homography computed in the point **G1** gives us the information to move 2D point of plane $\Pi$ to 3D points; if we want retrieve the rototranslation transformation between camera frame and the frame chosen for the homography $H^{-1}$ we can use the relation
+We need to compute a projective matrix which allow us to express the 3D points in an arbitrary reference frame different from the camera one.
+
+This "world" reference frame to which we can refer the 3D point is the same put on the plane $\Pi$ at the point **G1**.
+
+So we need to compute the transformation between the camera reference frame and the world reference frame in the form $\begin{bmatrix}R & t\end{bmatrix}$ also called **extrinsic** parameters of the camera.
+To do this I used the knowledge of the metric rectification;
+indeed the homography computed in the point **G1** gives us the information to move 2D point of plane $\Pi$ to 3D points; if we want retrieve the transformation between camera frame and the frame chosen for the homography $H^{-1}$ we can use the relation
 
 $$
-\begin{bmatrix} r_x & r_y & t \end{bmatrix} = K^{-1}H
+\begin{bmatrix} r_x & r_y & t \end{bmatrix} = \lambda (K^{-1}H)
 $$
 
-where $r_x$ and $r_y$ are the rescaled unit vectors of the world frame chosen as reference in the homography and $t$ is its origin position in the frame camera.
-The $r_z$ can be calculated as the unit vector which complete the rotation matrix given by $r_x$ and $r_y$
-
-$$
-r_z = \left( \frac{r_x}{\lVert r \rVert} \times \frac{r_y}{\lVert r \rVert} \right) \lVert r \rVert
-$$
+where $r_x$ and $r_y$ are the unit vectors of the world frame chosen as reference in the homography and $t$ is its origin position, all of them seen from camera reference frame.
+$\lambda$ is unknown scale factor, in order to remove it we can use the known information that $\lVert r_x \rVert = \lVert r_y \rVert = 1$ because $r_x$ and $r_y$ are the column of a rotation matrix.
+The $r_z$ can be calculated as the unit vector which complete the rotation matrix given by $r_x$ and $r_y$ so $r_z = r_x \times r_y$
 
 The projective matrix $M$ can be written as
 
 $$
-M = K \begin{bmatrix} r_x & r_y & r_z & t \end{bmatrix}
+M_w = K \begin{bmatrix} r_x & r_y & r_z & t \end{bmatrix}
 $$
 
-*I chose to use the homography in metric unit.*
+The resulting projective matrix is
 
-So I could easily draw the world reference frame in the image.
+$$
+M_w = \begin{bmatrix}
+      2713.3 &  2316.3 &  996.61 & 43654 \\
+     -612.99 &  2900.5 & -1704.7 & 37629 \\
+    -0.16737 & 0.84223 & 0.51248 & 32.29 \\
+\end{bmatrix}
+$$
 
-![reference frame](./output/reference_frame.png){height=250px}
+*I chose to use the homography in the meters unit, so I can express the 3D points directly in meters.*
+
+So, computed the projective matrix for the world reference frame I could easily draw it in the image.
+
+![world reference frame](./output/reference_frame.png){height=250px}
+
+I could be also determinate the position of the camera $c^w$ in the world frame as solution of the equation $M_w c^w = 0$ where $c^w$; it can be computed as the *null space* of $M$
+
+$$
+c^w = \begin{bmatrix}
+     11.453 \\
+    -23.087 \\
+    -21.325 \\
+\end{bmatrix}
+$$
 
 ### G4 - Reconstruction
 
-I chose to rectify the facade idetified by the line segment 1 of the plane $\Pi$.
+We need to rectify a castle's facade exploiting the knowledge of matrix $K$. 
+So, I chose to rectify the facade identified by the line segment 1 of the plane $\Pi$.
 First thing I put a comfortable reference frame on the facade 1 computing the transformation from the world frame to the new frame $T_f^w$
 
 $$
@@ -211,11 +234,19 @@ T_f^w = \begin{bmatrix}
 \end{bmatrix}
 $$
 
-Then I computed the camera matrix expressed in the new reference frame as $M_f = M T_f^w$, so I was able to express all the points in the facade 1 in a simple way.
+Then I computed the camera matrix expressed in the new reference frame as $M_f = M_w T_f^w$, so I was able to express all the points on the facade 1 in a simple way.
+
+$$
+M_f = \begin{bmatrix}
+      2713.3 &   996.61 &  2316.3 &  19234 \\
+     -612.99 &   1704.7 &  2900.5 &  43146 \\
+    -0.16737 & -0.51248 & 0.84223 & 33.796 \\
+\end{bmatrix}
+$$
 
 ![reference frame on facade 1](./output/reference_frame_facade1.png){height=250px}
 
-I defined 4 rectangle corners in the 3D world expressed in the new reference frame $[0, 0, 0]', [9, 0, 0]', [9, 12, 0]', [0, 12, 0]'$, and exploiting $M_f$ I found them projections in the image.
+I defined 4 rectangle corners in the 3D world expressed in the new reference frame $[0, 0, 0]', [9, 0, 0]', [9, 14, 0]', [0, 14, 0]'$, and exploiting $M_f$ I found them projections in the image.
 
 ![rectangle on facade 1](./output/rectangle_facade1.png){height=250px}
 
