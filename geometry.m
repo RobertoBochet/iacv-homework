@@ -284,16 +284,6 @@ vv.draw_point;
 % needs to solve W for some constraints in the form A w = 0
 % w2 = 0 due to skew factor s = 0
 
-% imposes the hard constraint w2=0
-C = [
-	[0 1 0 0 0 0];
- 	zeros([5,6]);
- 	];
-
-% gets the constraints' matrix
-[~, ~, V] = svd(C);
-C_p = V(:, 1+rank(C):end);
-
 % gets a normalizes transformation to rescale point
 % with the aim to reduce geometrical error in the estimation
 T = get_normalized_transformation([vv.X, v2.X, v3.X, v5.X]');
@@ -304,7 +294,7 @@ l_inf_r = inv(T)' * l_inf;
 % normalizes the vertical vanish point
 vv_r = T * vv;
 
-% uses only the homography for the metric rectification
+% uses only the transformation for the metric rectification
 % H_s, H_r, H_t do not contribute to change the result
 h = H_a * H_p;
 % normalizes the homography
@@ -329,15 +319,18 @@ A = [
 	A_p(l_inf_r.X, vv_r.X);
 	];
 
+%Removes the column corrsponding to w_2
+A(:,2) = [];
+
 % finds the solution for w
- [~, ~, V] = svd(A*C_p);
- w = C_p*V(:,end);
+[~, ~, V] = svd(A);
+w = V(:,end);
 
 % recomposes the conical
 W = [
-	[w(1) , w(2), w(4)];
-	[w(2), w(3), w(5)];
-	[w(4), w(5), w(6)];
+	[w(1) , 0, w(3)];
+	[0, w(2), w(4)];
+	[w(3), w(4), w(5)];
 	];
 
 % inverts the matrix if it is negative definite
