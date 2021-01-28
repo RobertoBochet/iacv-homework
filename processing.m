@@ -5,7 +5,7 @@ img = imread('input.jpg');
 img = im2double(img);
 
 %% Image crop
-% crops the image to exclude part of the sky which does not contain useful informations.
+% crops the image to exclude part of the sky which does not contain useful information
 img = img(900:end,:,:);
 
 %% Compute the sky mask
@@ -45,13 +45,13 @@ rescaled_size = k*size(img,1,2);
 % rescales the image
 img_edge = imresize(img_edge, rescaled_size, 'bilinear');
 
-% applyes the canny algorithm
+% applies the canny algorithm
 edges = edge(img_edge, 'canny', [0.1, 0.2], 3);
 
 figure; imshow(edges);
 
 %% Detecting lines
-% applies the Hogh transformation
+% applies the Hough transformation
 [H,T,R] = hough(edges, "Theta", (-90:1:89), 'RhoResolution', 1);
 % selects the peaks in the parameters plane
 P = houghpeaks(H, 300,'threshold', ceil(0.1*max(H(:))), "NHoodSize", [15,15]);
@@ -75,5 +75,5 @@ corners = detectSURFFeatures(img_corners);
 
 figure; imshow(img_corners), hold on;
 
-% plots the strogest features
+% plots the strongest features
 plot(corners.selectStrongest(500));

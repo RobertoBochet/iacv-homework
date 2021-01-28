@@ -101,15 +101,15 @@ l_inf.draw_line("Color","blue");
 %% Compute the affine rectification matrix to send l_inf to its canonical position
 H_p = [1 0 0; 0 1 0; l_inf.X.'];
 
-%% Show the affine rectificated image
+%% Show the affine rectified image
 img_a = imwarp(img, projective2d(H_p.'));
 figure; imshow(img_a), hold on;
 
-%% Affine rectify the ortogonal segments
+%% Affine rectify the orthogonal segments
 % This procedure is equivalent to rectify directly the corresponding lines
 sgpi_a = H_p * sgpi;
 
-% draws the affine rectificated plane PI
+% draws the affine rectified plane PI
 sgpi_a.draw;
 
 %% Compute the matrix to find infinite line conic via LSM
@@ -121,17 +121,17 @@ l4 = sgpi_a.Segments(4).line.X;
 l5 = sgpi_a.Segments(5).line.X;
 l6 = sgpi_a.Segments(6).line.X;
 
-% defines the shape of a single row of the 
+% defines the shape of a single row of the constraints' matrix
 a = @(l,m) [l(1)*m(1), l(1)*m(2)+l(2)*m(1), l(2)*m(2)];
 
-% defines the conical contraints in the form C_d s = 0
+% defines the conical constraints in the form C_d s = 0
 C_d = [
 	a(l1, l2);
 	a(l4, l5);
 	a(l5, l6);
 	];
 
-%% Searching the infinite line conic in affine rectificated image
+%% Searching the infinite line conic in affine rectified image
 % looks for the solution for s that minimizing ||C_d * s|| to find C_inf
 [~, ~, V] = svd(C_d);
 
@@ -142,7 +142,7 @@ s = V(:,end);
 C_inf = [[s(1) s(2) 0]; [s(2) s(3) 0]; [0 0 0]];
 S = [[s(1) s(2)]; [s(2) s(3)]];
 
-%% Looking for affine trasformation to map c_inf to its canonical position
+%% Looking for affine transformation to map c_inf to its canonical position
 [U,D,V] = svd(S);
 
 % defines the affine transformation from svd
@@ -160,7 +160,7 @@ if H_a(2,2) < 0
 	H_a = H_a * diag([1 -1 1]);
 end
 
-% computes the complessive homography
+% computes the overall homography
 H = H_a * H_p;
 
 %% Show the rectified image
@@ -217,11 +217,11 @@ figure; hold on, daspect([1 1 1]);
 sgpi_r.draw
 
 %% Rescale the frame
-% uses the real (approximated) size in meter of the line segment 4
+% uses the real (approximated) size in meters of the line segment 4
 % to rescale all the points
 r_len = 5.9;
 
-% gets the lengh of the line segment 4 in the rectification
+% gets the length of the line segment 4 in the rectification
 s4_len = Seg(sgpi_r.Segments(4).line * sgpi_r.Segments(5).line, sgpi_r.Segments(5).line * sgpi_r.Segments(6).line).length;
 
 % computes the scale factor
@@ -242,7 +242,7 @@ sgpi_s.draw
 %% ######## G2 Calibration ########
 figure; imshow(img), hold on;
 
-%% Add veritical lines
+%% Add vertical lines
 sgv = SegGroup([
 		1197 2226  1342 1191;
 		3150 2953  2838 1346;
@@ -252,13 +252,13 @@ sgv = SegGroup([
 		2769 2044  2839 2491;
 	]);
 
-% draws the verical lines
+% draws the vertical lines
 sgv.draw;
 
 %% Draw the extension of the vertical lines
 limit = Seg(HX(-1.5*[0,size(img,1)]),HX(-1.7*size(img,2,1))).line;
 
-% draws the prolungations of the vertical lines
+% draws the prolongations of the vertical lines
 sgv.draw_to(limit, "Color", "g", "LineWidth",1);
 
 %% Compute the vertical vanish point
@@ -271,20 +271,20 @@ vv.draw_point;
 %% Compute K matrix
 % consider the matrix W = (KK')^-1 and its elements w = [w1,w2,w3,w4,w5,w6]'
 % needs to solve W for some constraints in the form A w = 0
-% w2 = 0 due to skew factor approsimation s = 0
+% w2 = 0 due to skew factor s = 0
 
-% imposes the hard contraint w2=0
+% imposes the hard constraint w2=0
 C = [
 	[0 1 0 0 0 0];
  	zeros([5,6]);
  	];
 
-% gets the constraints matrix
+% gets the constraints' matrix
 [~, ~, V] = svd(C);
 C_p = V(:, 1+rank(C):end);
 
 % gets a normalizes transformation to rescale point
-% with the aim to reduce geometrical error in the extimation
+% with the aim to reduce geometrical error in the estimation
 T = get_normalized_transformation([vv.X, v2.X, v3.X, v5.X]');
 
 % normalizes the infinity line
@@ -311,7 +311,7 @@ A_p = @(l,v) [
 	-l(2)*v(1), l(1)*v(1)-l(2)*v(2), l(1)*v(2), -l(2)*v(3), l(1)*v(3), 0;
 	];
 
-% defines the constraints matrix for the form A w = 0
+% defines the constraints' matrix for the form A w = 0
 A = [
 	a(h(:,1), h(:,2));
  	a(h(:,1), h(:,1)) - a(h(:,2), h(:,2));
@@ -329,7 +329,7 @@ W = [
 	[w(4), w(5), w(6)];
 	];
 
-% inveres the matrix if it is negative definite
+% inverts the matrix if it is negative definite
 if all(eigs(W) < 0)
 	W = -W;
 end
@@ -337,7 +337,7 @@ end
 % decomposes the conic
 K = inv(chol(W));
 
-% renormalizes the camera matrix
+% re-normalizes the camera matrix
 K = T \ K;
 K = K / K(3,3);
 
@@ -408,7 +408,7 @@ Seg(x(4), x(1)).draw;
 
 % defines the points in the image
 x_img = [x(1).cart x(2).cart x(3).cart x(4).cart]';
-% defines the corresponding points in the desidered output image
+% defines the corresponding points in the desired output image
 x_new = 100*[X(1).cart, X(2).cart, X(3).cart, X(4).cart]';
 % drops the coordinate Z (it is always 0)
 x_new = x_new(:, 1:2);
