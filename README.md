@@ -1,11 +1,3 @@
----
-documentclass: scrartcl
-fontsize: 14pt
-header-includes: |
-  \makeatletter
-  \def\fps@figure{h}
-  \makeatother
----
 # IACV homework
 
 ## Image processing ([`processing.m`](./processing.m))
@@ -20,21 +12,21 @@ Before adjust the image contrast, I tried to remove as much sky as possible, whi
 I changed the space color of the image to the *HSV* then I selected only a small subset of the value *V*;
 in order to improve the quality of the mask I applied an iteration of `imdilate` to remove the small blob. So I got a sky mask.
 
-![sky masked](./output/sky_masked.png){height=250px}
+![sky masked](./output/sky_masked.png)
 
 #### Edges detection
 
 Before to apply the `canny` function we need to define one channel image; I tried some method to convert 3 channels image to one channel image, some of them using a single channel of a specific space color as **HSV**, but in finally I decided to use the classical conversion to the gray scale image due to the inadequate results of other methods.
 Then I tried to enhance the image contrast apply on it an adaptive histogram equalization exploiting method `adapthisteq`, because of the high exposition of the sky I have to limit the area of the histogram equalization to the castle only (excluding the sky), to do this I used the sky mask previously computed with the exploiting `roifilt2` function.
 
-![histogram equalized image](./output/histeq.png){height=250px}
+![histogram equalized image](./output/histeq.png)
 
 As last step before apply the edge detection algorithm I decided to rescale the image to reduce its size;
 this behaviour showed to improve the quality of the edge detection and the following lines' detection.
 Then I did the edge detection exploiting the `canny` algorithm: this algorithm, different to the other differentiation methods, returns a binary image composed by lines, this result simplify the application of the lines' detection exploiting the **Hough transformation**.
 I tuned the `canny` algorithm parameters with the hysteresis thresholds of $\begin{bmatrix} 0.1 & 0.2 \end{bmatrix}$ and a sigma of the **Gausian filter** of $3$.
 
-![edges](./output/edges.png){height=250px}
+![edges](./output/edges.png)
 
 #### Lines detection
 
@@ -45,14 +37,14 @@ Due to the preprocessing I could maintain parameters like the default ones for t
 I set a limits of 300 peaks from the parametric plane and a neighbours' suppression to $\begin{bmatrix} 15 & 15 \end{bmatrix}$ to reduce similar results.
 Finally, I retrieved the segments lines with the `houghlines` function setting a max gap between two points on the same line of $8$ pixels and the minimum length of a segment line of $25$ pixels.
 
-![detected lines](./output/lines.svg){height=250px}
+![detected lines](./output/lines.svg)
 
 #### Features detection
 
 For this step I decided to apply only the histogram equalization on the image after the conversion to the gray scale.
 To detect the images features I tried several algorithms, then I chose the **SURF** one which produces the best result (several algorithms detect features only on the battlement).
 
-![features detected](./output/features.svg){height=250px}
+![features detected](./output/features.svg)
 
 ## Geometry ([`geometry.m`](./geometry.m))
 
@@ -100,7 +92,7 @@ In order to do it we need to compute the infinity line for the plane $\Pi$ in th
 
 So I selected some lines parallel to plane $\Pi$ on the facades 2, 3 and 5; for each plane I created an instance of `SegGroup` to group the parallel line segments. With the method `find_vanish_point` I retrieve the vanishes points corresponding to the three lines groups.
 
-![parallel lines](./output/parallel_lines.svg){height=250px}
+![parallel lines](./output/parallel_lines.svg)
 
 The `find_vanish_point` sets the problem to find a vanish point as a minimization one. We know that a point $p$ on a line $l$ solves the relation $l^Tp=0$, thus the lines are collected in a matrix $L=\begin{bmatrix}l_1 & l_2 & \dots\end{bmatrix}^T$ where the best approximation for the vanish point is the point $v$ that minimize the relation $\lVert Lv \rVert$.
 The point $v$ that minimize the error is found exploiting the *least squares solution of homogeneous equation* as the last column of the matrix $V$ getting from the *singular value decomposition* of the matrix $L$.
@@ -136,7 +128,7 @@ $$
 
 Apply the transformation to the image we can restore the affine properties. 
 
-![affine properties rectified](./output/affine_rectification.png){height=250px}
+![affine properties rectified](./output/affine_rectification.png)
 
 #### Recovery of the metric properties
 
@@ -191,7 +183,7 @@ H_A = \begin{bmatrix}
 \end{bmatrix}
 $$
 
-![metric properties rectified](./output/metric_rectification.png){height=250px}
+![metric properties rectified](./output/metric_rectification.png)
 
 #### Fix a reference frame on $\Pi$
 
@@ -209,7 +201,7 @@ H_S = \begin{bmatrix}
 \end{bmatrix}
 $$
 
-![$\Pi$ on reference frame](./output/pi_reference_frame.svg){height=250px}
+![$\Pi$ on reference frame](./output/pi_reference_frame.svg)
 
 The overall homography to map the image points of the plane $\Pi$ to the new reference system is
 
@@ -227,7 +219,7 @@ $$
 
 I selected the vertical lines shown in the figure to find the vertical vanish point. As previously I put the vertical line segments in an instance of `SegGroup` and I used the method `find_vanish_point` to find the intersection point of the segments' associated lines. As previously saw, the function `find_vanish_point` solve the problem to find intersection point as an optimization one, exploiting `svd` after the data normalization.
 
-![vertical vanish point](./output/vertical_vanish.svg){height=500px}
+![vertical vanish point](./output/vertical_vanish.svg)
 
 #### Calibration
 
@@ -349,7 +341,7 @@ $$
 
 So, computed the projective matrix for the world reference frame I could easily draw it in the image.
 
-![world reference frame](./output/reference_frame.png){height=250px}
+![world reference frame](./output/reference_frame.png)
 
 I could be also determinate the position of the camera $c^w$ in the world frame as solution of the equation $M_w c^w = 0$ where $c^w$; it can be computed as the *null space* of $M$
 
@@ -386,12 +378,12 @@ M_f = \begin{bmatrix}
 \end{bmatrix}
 $$
 
-![reference frame on facade 1](./output/reference_frame_facade1.png){height=250px}
+![reference frame on facade 1](./output/reference_frame_facade1.png)
 
 I defined 4 rectangle corners in the 3D world expressed in the new reference frame $[0, 0, 0]', [9, 0, 0]', [9, 14, 0]', [0, 14, 0]'$, and exploiting $M_f$ I found them projections in the image.
 
-![rectangle on facade 1](./output/rectangle_facade1.png){height=250px}
+![rectangle on facade 1](./output/rectangle_facade1.png)
 
 Having 4 points in a plane in 3D space and their projections in the image I could define a homography that rectify the facade 1.
 
-![rectified facade 1](./output/rectified_facade1.png){height=250px}
+![rectified facade 1](./output/rectified_facade1.png)
