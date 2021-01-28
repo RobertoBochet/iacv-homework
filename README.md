@@ -85,6 +85,10 @@ To simplify the developing of the required result I chose to write some classes 
     
     Given a set of homogeneous points returns a similar transformation to normalize them. 
 
+- `draw_axis`
+
+    Given a projective matrix $M$, it draws the reference frame in the image.
+
 ### G1 - 2D reconstruction
 
 *Due to the experimental results I decided to include some hand-taken (and finding in different way) lines to improve the accuracy of the calculations.*

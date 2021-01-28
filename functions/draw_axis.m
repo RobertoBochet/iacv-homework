@@ -19,6 +19,7 @@ z_axis.draw("Color", "blue", "LineWidth", lw);
 c = x_axis.line * y_axis.line;
 c = c.cart;
 
+% draws a circle in the origin
 th = 0:pi/50:2.1*pi;
 xunit = 1 * cos(th) + c(1);
 yunit = 1 * sin(th) + c(2);

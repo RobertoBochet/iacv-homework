@@ -43,6 +43,7 @@ classdef SegGroup
 		end
 		
 		function draw_to(obj, l, varargin)
+			%DRAW_TO Draws the segment until they intersect a line
 			arguments
 				obj(1,1) SegGroup
 				l(1,1) HX
@@ -57,6 +58,7 @@ classdef SegGroup
 		end
 		
 		function T = get_normalized_transformation(obj)
+			%GET_NORMALIZED_TRANSFORMATION Retrieves a transformation to normalized the segments points
 			P = zeros(2 * size(obj.Segments,1), 3);
 			
 			for i=1:size(obj.Segments,1)
@@ -68,7 +70,8 @@ classdef SegGroup
 			T = inv(T)';
 		end
 		
-		function v = find_vanish_point(obj)			
+		function v = find_vanish_point(obj)
+			%FIND_VANISH_POINT Return the vanish point given by the prolungation of the segments
 			T = obj.get_normalized_transformation;
 			
 			A = zeros(size(obj.Segments,1), 3);

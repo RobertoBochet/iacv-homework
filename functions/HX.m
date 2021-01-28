@@ -9,6 +9,7 @@ classdef HX
 		end
 		
 		function out = drawing_limits(val)
+			%DRAWING_LIMITS They are the limits in which can be drawn
 			persistent drawing_limits;
 			
 			if isempty(drawing_limits)
@@ -23,6 +24,7 @@ classdef HX
 		end
 		
 		function sdraw_point(obj)
+			%SDRAW_POINT Draws the given point
 			obj.draw_point();
 		end
 	end
@@ -41,6 +43,7 @@ classdef HX
 		end
 		
 		function r = mtimes(obj1,obj2)
+			%MTIMES If provided two HX returns HX_1 x HX_2 else retruns the matrix product
 			arguments
 				obj1
 				obj2 HX

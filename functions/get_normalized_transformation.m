@@ -1,6 +1,6 @@
 function [T, A] = get_normalized_transformation(A)
 %GET_NORMALIZED_TRANSFORMATION Given a set of points returns a
-%transformation to nomralize the data and the normalized data
+%transformation T to nomralize the data and the normalized data A
 
 % calculates the average values for x and y
 xr = mean(A(:,1));
