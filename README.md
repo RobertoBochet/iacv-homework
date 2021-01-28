@@ -8,7 +8,7 @@ header-includes: |
 ---
 # IACV homework
 
-## Image processing ([`hw_processing.m`](./hw_processing.m))
+## Image processing ([`processing.m`](./processing.m))
 
 ### F1 - Feature extraction
 
@@ -17,11 +17,44 @@ First thing I cropped the image to reduce sky area which is useless in the featu
 #### Sky mask
 
 Before adjust the image contrast, I tried to remove as much sky as possible, which could reduce the quality of the contrast improvement.
-I changed the space color of the image to the *HSV* then I selected only a small subset of the value *V*; in order to improve the quality of the mask I applied an iteration of `imdilate`. So I got a sky mask.
+I changed the space color of the image to the *HSV* then I selected only a small subset of the value *V*;
+in order to improve the quality of the mask I applied an iteration of `imdilate` to remove the small blob. So I got a sky mask.
 
 ![sky masked](./output/sky_masked.png){height=250px}
 
-## Geometry ([`hw_geometry.m`](./hw_geometry.m))
+#### Edges detection
+
+Before to apply the `canny` function we need to define one channel image; I tried some method to convert 3 channels image to one channel image, some of them using a single channel of a specific space color as **HSV**, but in finally I decided to use the classical conversion to the gray scale image due to the inadequate results of other methods.
+Then I tried to enhance the image contrast apply on it an adaptive histogram equalization exploiting method `adapthisteq`, because of the high exposition of the sky I have to limit the area of the histogram equalization to the castle only (excluding the sky), to do this I used the sky mask previously computed with the exploiting `roifilt2` function.
+
+![histogram equalized image](./output/histeq.png){height=250px}
+
+As last step before apply the edge detection algorithm I decided to rescale the image to reduce its size;
+this behaviour showed to improve the quality of the edge detection and the following lines' detection.
+Then I did the edge detection exploiting the `canny` algorithm: this algorithm, different to the other differentiation methods, returns a binary image composed by lines, this result simplify the application of the lines' detection exploiting the **Hough transformation**.
+I tuned the `canny` algorithm parameters with the hysteresis thresholds of $\begin{bmatrix} 0.1 & 0.2 \end{bmatrix}$ and a sigma of the **Gausian filter** of $3$.
+
+![edges](./output/edges.png){height=250px}
+
+#### Lines detection
+
+In order to detect the lines in the image I used the **Hough transformation**, this transformation, for each point in the image (in this case the edges image), defines a family of intersecting straight lines that in parametric plane (given by the pairs $(\rho, \theta)$ of the parametric line $\rho = x \cos(\theta) + y \sin(\theta)$) is a curve.
+The plane is used as an accumulator, fitted with all the parameters pairs got from the points of the edges image, then the lines in the image are identified as the peaks of the parametric plane.
+
+Due to the preprocessing I could maintain parameters like the default ones for the `hough` function, I set the resolution of theta as $1^\circ$ and the rho resolution to $1$.
+I set a limits of 300 peaks from the parametric plane and a neighbours' suppression to $\begin{bmatrix} 15 & 15 \end{bmatrix}$ to reduce similar results.
+Finally, I retrieved the segments lines with the `houghlines` function setting a max gap between two points on the same line of $8$ pixels and the minimum length of a segment line of $25$ pixels.
+
+![detected lines](./output/lines.svg){height=250px}
+
+#### Features detection
+
+For this step I decided to apply only the histogram equalization on the image after the conversion to the gray scale.
+To detect the images features I tried several algorithms, then I chose the **SURF** one which produces the best result (several algorithms detect features only on the battlement).
+
+![features detected](./output/features.svg){height=250px}
+
+## Geometry ([`geometry.m`](./geometry.m))
 
 ### Functions and class
 
@@ -48,6 +81,8 @@ To simplify the developing of the required result I chose to write some classes 
     Given a set of homogeneous points returns a similar transformation to normalize them. 
 
 ### G1 - 2D reconstruction
+
+*Due to the experimental results I decided to include some hand-taken lines to improve the accuracy of the calculations.*
 
 #### Recovery of the affine properties
 
@@ -250,6 +285,6 @@ I defined 4 rectangle corners in the 3D world expressed in the new reference fra
 
 ![rectangle on facade 1](./output/rectangle_facade1.png){height=250px}
 
-Having 4 points in a plane in 3D space and them projections in the image I could define a homography that rectify the facade 1.
+Having 4 points in a plane in 3D space and their projections in the image I could define a homography that rectify the facade 1.
 
 ![rectified facade 1](./output/rectified_facade1.png){height=250px}
