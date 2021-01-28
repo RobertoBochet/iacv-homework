@@ -82,7 +82,7 @@ To simplify the developing of the required result I chose to write some classes 
 
 ### G1 - 2D reconstruction
 
-*Due to the experimental results I decided to include some hand-taken lines to improve the accuracy of the calculations.*
+*Due to the experimental results I decided to include some hand-taken (and finding in different way) lines to improve the accuracy of the calculations.*
 
 #### Recovery of the affine properties
 
@@ -91,26 +91,36 @@ In order to do it we need to compute the infinity line for the plane $\Pi$ in th
 
 So I selected some lines parallel to plane $\Pi$ on the facades 2, 3 and 5; for each plane I created an instance of `SegGroup` to group the parallel line segments. With the method `find_vanish_point` I retrieve the vanish points corresponding to the three lines groups.
 
-![parallel lines](./output/parallel_lines.png){height=250px}
+![parallel lines](./output/parallel_lines.svg){height=250px}
 
 The `find_vanish_point` sets the problem to find the vanish point as a minimization one. We know that a point $p$ on a line $l$ solves the relation $l^Tp=0$, thus the lines are collected in a matrix $L=\begin{bmatrix}l_1 & l_2 & \dots\end{bmatrix}^T$ where the best approximation fot the vanish point is the point $v$ that minimize the relation $\lVert Lv \rVert$.
 The point $v$ that minimize the error is found exploiting the *least squares solution of homogeneus equation*  as the last column of the matrix $V$ getting from the *singular value decomposition* of the matrix $L$.
 *In order to reduce the error given by the `svd` function, the line coordinates are normalized rescaling them around zero.*
 
-![vanish points](./output/vanish_points.png) 
+![vanish points](./output/vanish_points.svg) 
 
 Found the 3 vanish points I use them to find the infinity line in the image, which have to pass to all the three vanish points. Due to the noise the infinity line cannot satisfy the relation $v l_\infty = 0$ for all the three vanish points, so I set also the problem to find infinity line as a minimization one. In this case I grouped the vanish points in a matrix $V = \begin{bmatrix}v_2 & v_3 & v_5\end{bmatrix}^T$ looking for the line $l_\infty$ which minimize $\lVert V l_\infty \rVert$.
 Also to solve this minimization problem I used the `svd` function after the data were been normalized to reduce errors.
 
-![infinity line](./output/infinity_line.png)
+![infinity line](./output/infinity_line.svg)
 
 The homography to restore the affinity property can be written as
 
 $$
 H_p = \begin{bmatrix}
-        1 & 0 & 0 \\
-        0 & 1 & 0 \\
-          & l_\infty^T &   \\
+    1 & 0 & 0 \\
+    0 & 1 & 0 \\ 
+    & l_\infty^T &   \\
+\end{bmatrix}
+$$
+
+So, the homography to restore affinity properties is
+
+$$
+H_p = \begin{bmatrix}
+    1 & 0 & 0 \\
+    0 & 1 & 0 \\
+    -2.7284 \cdot 10^{-6} & -2.8876 \cdot 10^{-4}  & 1 \\
 \end{bmatrix}
 $$
 
@@ -130,8 +140,8 @@ C_\infty^\ast =\begin{bmatrix}
     0^T & 0 \\
 \end{bmatrix} \qquad
 KK^T = \begin{bmatrix}
-s_1 & s_2  \\
-s_2 & s_3 \\
+    s_1 & s_2  \\
+    s_2 & s_3 \\
 \end{bmatrix} = S
 $$
 
@@ -139,9 +149,26 @@ So the previously seen constraint can be written as $a^T s = 0$ where $a=\begin{
 $s$ can be found solving the system $A^T s = 0$ where $A$ is a matrix which columns are composed by the relation $a(l,m)$ for at least 2 couples of orthogonal lines, but because we have 3 couples of orthogonal lines in the plane $\Pi$ (1-2, 4-5, 5-6) it is useful set the problem to find $s$ as an optimization one. The problem to minimize $\lVert A^Ts \rVert$ can be solved exploiting the `svd` method.
 
 Gotten $S$ and thus $C_\infty^\ast$ we can find the homography that put back this conic to its canonical position under the relation $\bar C_\infty^\ast = H_A C_\infty^\ast H_A^T$ where $\bar C_\infty^\ast$ is the canonical infinity line conic.
-$H_A$ can be gotten exploiting SVD of $C_\infty^\ast$ (because of $C_\infty^\ast$ have last column and last row equal to zero is better to decompose $S$) as $H_A^{-1} = U*\sqrt{D} * V^T + diag(0, 0, 1)$.
+$H_A$ can be gotten exploiting SVD of $C_\infty^\ast$ (because of $C_\infty^\ast$ have last column and last row equal to zero is better to decompose $S$) as
+
+$$
+H_A^{-1} = \begin{bmatrix}
+    U \sqrt{D} V^T & 0 \\
+    0 & 1 \\
+\end{bmatrix}
+$$
 
 *Affinity transformation may include a mirror effect, so I decide to remove this effect to re-orientate the image in the original orientation if this effect appears.*
+
+So, the homography to restore metric properties is
+
+$$
+H_a = \begin{bmatrix}
+      1.2422 & -0.34835 & 0 \\
+    -0.34835 &   1.5085 & 0 \\
+    0 & 0 & 1 \\
+\end{bmatrix}
+$$
 
 ![metric properties rectified](./output/metric_rectification.png){height=250px}
 
@@ -149,9 +176,29 @@ $H_A$ can be gotten exploiting SVD of $C_\infty^\ast$ (because of $C_\infty^\ast
 
 To better evaluate the points on plane $\Pi$ I decided to compute a further similar transformation to assign an arbitrary reference frame on $\Pi$.
 I chose to put the reference frame at the intersection of the lines 1 and 2, with y-axis aligned with the line 2 and with z-axis headed to the sky;
-first I applied a translation to define the new origin, then I calculated the rotation matrix to align the line $2$ to the y-axis, and as last step I rescaled the points to meter unit exploiting an approximate measure of the segment $5$ gotten from internet. 
+first I applied a translation to define the new origin, then I calculated the rotation matrix to align the line $2$ to the y-axis, and as last step I rescaled the points to meter unit exploiting an approximate measure of the segment $5$ gotten from internet.
+
+The homography included rotation, translation and scale is
+
+$$
+H_t = \begin{bmatrix}
+    4.6764 \cdot 10^{-3} & -2.4485  \cdot 10^{-3} & -4.2493 \\
+    2.4485 \cdot 10^{-3} &  4.6764  \cdot 10^{-3} & -13.848 \\
+    0 & 0 & 1 \\
+\end{bmatrix}
+$$
 
 ![$\Pi$ on reference frame](./output/pi_reference_frame.svg){height=250px}
+
+The overall homography to map the image points of the plane $\Pi$ to the new reference system is
+
+$$
+H = \begin{bmatrix}
+     6.6736 \cdot 10^{-3} & -4.0956  \cdot 10^{-3} & -4.2493 \\
+     1.4503 \cdot 10^{-3} &    1.02  \cdot 10^{-2} & -13.848 \\
+    -2.7284 \cdot 10^{-6} &  -2.8876 \cdot 10^{-4} &       1 \\
+\end{bmatrix}
+$$
 
 ### G2 - Calibration
 
@@ -159,7 +206,7 @@ first I applied a translation to define the new origin, then I calculated the ro
 
 I selected the vertical lines shown in the figure to find the vertical vanish point. As previously I put the vertical segments in an instance of `SegGroup` and I used the method `find_vanish_point` to find the intersection point of the segments' associated lines. As previously saw, the function `find_vanish_point` solve the problem to find intersection point as an optimization one, exploiting `svd` after the data normalization.
 
-![vertical vanish point](./output/vertical_vanish.png){height=500px}
+![vertical vanish point](./output/vertical_vanish.svg){height=500px}
 
 #### Calibration
 
@@ -198,9 +245,9 @@ The parameters of $\omega$ were stacked in a vector $w$ and the constraints were
 
 $$
 K = \begin{bmatrix}
-    3113 &      0 & 2007.5 \\
-       0 & 2983.2 & 1671.8 \\
-       0 &      0 &      1 \\
+    3138.7 &      0 & 2000.3 \\
+         0 & 2883.4 & 1811.5 \\
+         0 &      0 &      1 \\
 \end{bmatrix}
 $$
 
@@ -232,9 +279,9 @@ The resulting projective matrix is
 
 $$
 M_w = \begin{bmatrix}
-      2713.3 &  2316.3 &  996.61 & 43654 \\
-     -612.99 &  2900.5 & -1704.7 & 37629 \\
-    -0.16737 & 0.84223 & 0.51248 & 32.29 \\
+      2729.3 &  2342.5 &  957.52 &  44035 \\
+     -621.63 &  2931.9 & -1616.4 &  37958 \\
+    -0.17205 & 0.85301 & 0.49272 & 32.572 \\
 \end{bmatrix}
 $$
 
@@ -248,9 +295,9 @@ I could be also determinate the position of the camera $c^w$ in the world frame 
 
 $$
 c^w = \begin{bmatrix}
-     11.453 \\
-    -23.087 \\
-    -21.325 \\
+    11.409 \\
+    -22.91 \\
+    -22.46 \\
 \end{bmatrix}
 $$
 
@@ -273,9 +320,9 @@ Then I computed the camera matrix expressed in the new reference frame as $M_f =
 
 $$
 M_f = \begin{bmatrix}
-      2713.3 &   996.61 &  2316.3 &  19234 \\
-     -612.99 &   1704.7 &  2900.5 &  43146 \\
-    -0.16737 & -0.51248 & 0.84223 & 33.796 \\
+      2729.3 &  -957.52 &  2342.5 &  19471 \\
+     -621.63 &   1616.4 &  2931.9 &  43553 \\
+    -0.17205 & -0.49272 & 0.85301 & 34.121 \\
 \end{bmatrix}
 $$
 
