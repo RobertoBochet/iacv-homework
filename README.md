@@ -256,11 +256,48 @@ $$
 $$
 
 This equation gives two other constraints.
-For these, I chose the vertical vanish point and the infinity line found at the point **G1**.
+For these, I chose the vertical vanish point $v_v$ and the infinity line $l_\infty$ found at the point **G1**.
 
-Before compose the matrix for the `svd` the data were been normalized exploiting the function `get_normalized_transformation`.
+The 2 kind of soft constraints cannot be used directly with the `svd` method, indeed we need to write these constraints in the form $A w = 0$.
+So we can stacked the elements of the matrix $\omega$ in a vector $w = \begin{bmatrix} w_1 & w_2 & w_3 & w_4 & w_5 & w_6 \end{bmatrix}$.
 
-The parameters of $\omega$ were stacked in a vector $w$ and the constraints were rewritten in the form $A w = 0$, the solution for $w$ was found exploiting the `svd` then recomposed in the shape of conic $\omega$, exploiting *Cholesky* algorithm and before the de-normalization the matrix $K$ was found.
+The first kind of constraint $v^T \omega u = 0$ provides one row of $A$ in the form
+
+$$
+a_r(v,u) = \begin{bmatrix} v_1 u_1 & v_1 u_2 + v_2 u_1 & v_2 u_2 & v_1 u_3 + v_3 u_1 & v_2 u_3 + v_3 u_2 & v_3 u_3 \end{bmatrix}
+$$
+
+Instead, the second kind $[l]_x \omega v = 0$ provides three linear dependent row of $A$ in the form
+
+$$
+A_r(l,v) = \begin{bmatrix}
+    0         & -l_3 v_1          & -l_3 v_2 & l_2 v_1           & l_2 v_2 - l_3 v_3 & l_2 v_3 \\
+    l_3 v_1   & l_3 v_2           & 0        & l_3 v_3 - l_1 v_1 & -l_1 v_2          & l_1 v_3 \\
+    - l_2 v_1 & l_1 v_1 - l_2 v_2 & l_1 v_2  & -l_2 v_3          & l_1 v_3           & 0       \\
+\end{bmatrix}
+$$
+
+So, our constraints matrix $A$ can be composed as
+
+$$
+A = \begin{bmatrix}
+    a_r(h_1, h_2) \\
+    a_r(h_1, h_1) - a_r(h_2, h_2) \\
+    A_r(l_\infty, v_v)
+\end{bmatrix}
+$$
+
+*Due to linear dependency of the row of $A_r$ one of them could be dropped, this would not afflict the result*
+
+Due to the hard constraint $w_2 = 0$ I chose to drop the corresponding row in $w$ and the corresponding column in the matrix $A$.
+
+Before compose the matrix for the `svd` the data were been normalized exploiting the function `get_normalized_transformation` which returns a transformation $T$.
+
+So I applied the `svd` function to $A$, and I got the $w$ vector as the last row of the matrix V given by the decomposition. Then, I recomposed the matrix $\omega$ and I could get the normalized calibration matrix $\bar K$ exploiting the **Cholesky factorization** due to the relation $\omega = (\bar K \bar K^T)^{-1}$.
+
+*The optimization method might return a negative definite $\omega$ matrix, while Cholesky factorization works only on positive definite matrix, but $\omega$ is invariant to rescale factor so if this happens it is enough to change the sign of $\omega$*
+ 
+As last step (because of the data normalization) I removed the precondition effect from $\bar K$ with $K = T^{-1} \bar K$.
 
 $$
 K = \begin{bmatrix}
